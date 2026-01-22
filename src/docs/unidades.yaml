@@ -1,0 +1,232 @@
+paths:
+  /unidades:
+    get:
+      tags:
+        - Unidades
+      summary: Get all units
+      description: Returns a list of all units (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Units retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Unidad'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Unidades
+      summary: Create a new unit
+      description: Creates a new unit (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUnidadRequest'
+            example:
+              condominioId: 123e4567-e89b-12d3-a456-426614174000
+              numero: "A-101"
+              propietarioId: 987e6543-e21b-45d6-a789-987654321000
+              inquilinoId: null
+              tipo: departamento
+              metrosCuadrados: 85.5
+              habitaciones: 2
+              banos: 2
+              estacionamientos: 1
+              cuotaMantenimiento: 1500.00
+              estadoPago: al_corriente
+      responses:
+        '201':
+          description: Unit created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Unidad creada exitosamente
+                  data:
+                    $ref: '#/components/schemas/Unidad'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /unidades/condominio/{condominioId}:
+    get:
+      tags:
+        - Unidades
+      summary: Get units by condominium
+      description: Returns all units belonging to a specific condominium (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: condominioId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Condominium ID
+      responses:
+        '200':
+          description: Units retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Unidad'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /unidades/{id}:
+    get:
+      tags:
+        - Unidades
+      summary: Get unit by ID
+      description: Returns a single unit by ID (admin, condoAdmin, owner, and tenant can access)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unit ID
+      responses:
+        '200':
+          description: Unit retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Unidad'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Unidades
+      summary: Update unit
+      description: Updates unit information (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unit ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUnidadRequest'
+      responses:
+        '200':
+          description: Unit updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Unidad actualizada exitosamente
+                  data:
+                    $ref: '#/components/schemas/Unidad'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Unidades
+      summary: Delete unit (soft delete)
+      description: Deactivates a unit (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unit ID
+      responses:
+        '200':
+          description: Unit deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Unidad eliminada exitosamente
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

@@ -1,0 +1,242 @@
+paths:
+  /pagos:
+    get:
+      tags:
+        - Pagos
+      summary: Get all payments
+      description: Returns a list of all payments (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Payments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pago'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Pagos
+      summary: Create a new payment
+      description: Creates a new payment (all authenticated users)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePagoRequest'
+            example:
+              unidadId: 123e4567-e89b-12d3-a456-426614174000
+              usuarioId: 987e6543-e21b-45d6-a789-987654321000
+              monto: 1500.00
+              concepto: Cuota de mantenimiento - Enero 2025
+              metodoPago: transferencia
+              referencia: REF123456789
+              notas: Pago realizado a tiempo
+      responses:
+        '201':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Pago creado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Pago'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /pagos/unidad/{unidadId}:
+    get:
+      tags:
+        - Pagos
+      summary: Get payments by unit
+      description: Returns all payments for a specific unit (admin, condoAdmin, owner, and tenant)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: unidadId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unit ID
+      responses:
+        '200':
+          description: Payments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pago'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /pagos/{id}:
+    get:
+      tags:
+        - Pagos
+      summary: Get payment by ID
+      description: Returns a single payment by ID (admin, condoAdmin, owner, and tenant)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Payment ID
+      responses:
+        '200':
+          description: Payment retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Pago'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Pagos
+      summary: Update payment
+      description: Updates payment information (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Payment ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado:
+                  type: string
+                  enum: [pendiente, completado, rechazado]
+                fechaPago:
+                  type: string
+                  format: date-time
+                comprobante:
+                  type: string
+                  format: uri
+                notas:
+                  type: string
+            example:
+              estado: completado
+              fechaPago: "2025-01-15T10:30:00Z"
+              comprobante: https://storage.example.com/comprobantes/pago123.pdf
+      responses:
+        '200':
+          description: Payment updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Pago actualizado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Pago'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Pagos
+      summary: Delete payment
+      description: Deletes a payment record (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Payment ID
+      responses:
+        '200':
+          description: Payment deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Pago eliminado exitosamente
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

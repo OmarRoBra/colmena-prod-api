@@ -1,0 +1,223 @@
+paths:
+  /reglamentos:
+    get:
+      tags:
+        - Reglamentos
+      summary: Get all regulations
+      description: Returns a list of all regulations (all authenticated users can read)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Regulations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reglamento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Reglamentos
+      summary: Create a new regulation
+      description: Creates a new regulation (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [condominioId, titulo, contenido, vigenciaDesde]
+              properties:
+                condominioId:
+                  type: string
+                  format: uuid
+                titulo:
+                  type: string
+                  maxLength: 200
+                contenido:
+                  type: string
+                categoria:
+                  type: string
+                  maxLength: 100
+                vigenciaDesde:
+                  type: string
+                  format: date-time
+                documento:
+                  type: string
+                  format: uri
+                  maxLength: 500
+            example:
+              condominioId: 123e4567-e89b-12d3-a456-426614174000
+              titulo: Reglamento de convivencia
+              contenido: "Artículo 1: Todos los residentes..."
+              categoria: general
+              vigenciaDesde: "2025-01-01T00:00:00Z"
+              documento: https://storage.example.com/reglamentos/convivencia.pdf
+      responses:
+        '201':
+          description: Regulation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reglamento creado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Reglamento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /reglamentos/{id}:
+    get:
+      tags:
+        - Reglamentos
+      summary: Get regulation by ID
+      description: Returns a single regulation (all authenticated users can read)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Regulation ID
+      responses:
+        '200':
+          description: Regulation retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Reglamento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Reglamentos
+      summary: Update regulation
+      description: Updates regulation information (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Regulation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titulo:
+                  type: string
+                  maxLength: 200
+                contenido:
+                  type: string
+                categoria:
+                  type: string
+                  maxLength: 100
+                vigenciaDesde:
+                  type: string
+                  format: date-time
+                activo:
+                  type: boolean
+                documento:
+                  type: string
+                  format: uri
+                  maxLength: 500
+      responses:
+        '200':
+          description: Regulation updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reglamento actualizado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Reglamento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Reglamentos
+      summary: Delete regulation
+      description: Deletes a regulation (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Regulation ID
+      responses:
+        '200':
+          description: Regulation deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reglamento eliminado exitosamente
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

@@ -1,0 +1,239 @@
+paths:
+  /mantenimiento:
+    get:
+      tags:
+        - Mantenimiento
+      summary: Get all maintenance requests
+      description: Returns a list of all maintenance requests (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Maintenance requests retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Mantenimiento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Mantenimiento
+      summary: Create a new maintenance request
+      description: Creates a new maintenance request (all authenticated users)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [condominioId, solicitanteId, titulo, descripcion, categoria]
+              properties:
+                condominioId:
+                  type: string
+                  format: uuid
+                unidadId:
+                  type: string
+                  format: uuid
+                solicitanteId:
+                  type: string
+                  format: uuid
+                titulo:
+                  type: string
+                  maxLength: 200
+                descripcion:
+                  type: string
+                categoria:
+                  type: string
+                  maxLength: 100
+                prioridad:
+                  type: string
+                  enum: [baja, media, alta, urgente]
+                  default: media
+                imagenes:
+                  type: array
+                  items:
+                    type: string
+                notas:
+                  type: string
+            example:
+              condominioId: 123e4567-e89b-12d3-a456-426614174000
+              unidadId: 987e6543-e21b-45d6-a789-987654321000
+              solicitanteId: 111e2222-e33b-44d5-a666-777888999000
+              titulo: Fuga de agua en baño
+              descripcion: Hay una fuga considerable en la tubería del baño principal
+              categoria: fontaneria
+              prioridad: alta
+              imagenes: ["https://storage.example.com/img1.jpg"]
+      responses:
+        '201':
+          description: Maintenance request created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Solicitud de mantenimiento creada exitosamente
+                  data:
+                    $ref: '#/components/schemas/Mantenimiento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /mantenimiento/{id}:
+    get:
+      tags:
+        - Mantenimiento
+      summary: Get maintenance request by ID
+      description: Returns a single maintenance request (filtered by role in controller)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Maintenance request ID
+      responses:
+        '200':
+          description: Maintenance request retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Mantenimiento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Mantenimiento
+      summary: Update maintenance request
+      description: Updates maintenance request (admin, condoAdmin, worker, and serviceProvider)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Maintenance request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado:
+                  type: string
+                  enum: [pendiente, en_proceso, completado, cancelado]
+                asignadoA:
+                  type: string
+                  format: uuid
+                costo:
+                  type: number
+                fechaInicio:
+                  type: string
+                  format: date-time
+                fechaCompletado:
+                  type: string
+                  format: date-time
+                notas:
+                  type: string
+            example:
+              estado: en_proceso
+              asignadoA: 222e3333-e44b-55d6-a777-888999000111
+              fechaInicio: "2025-01-15T09:00:00Z"
+      responses:
+        '200':
+          description: Maintenance request updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Mantenimiento actualizado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Mantenimiento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Mantenimiento
+      summary: Delete maintenance request
+      description: Deletes a maintenance request (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Maintenance request ID
+      responses:
+        '200':
+          description: Maintenance request deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Mantenimiento eliminado exitosamente
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

@@ -1,0 +1,318 @@
+paths:
+  /condominios:
+    get:
+      tags:
+        - Condominios
+      summary: Get all condominios
+      description: Returns a list of all condominiums (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Condominiums retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Condominio'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Condominios
+      summary: Create a new condominium
+      description: Creates a new condominium (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCondominioRequest'
+            example:
+              nombre: Residencial Las Palmas
+              direccion: Av. Principal 123, Col. Centro
+              ciudad: Ciudad de México
+              estado: CDMX
+              codigoPostal: "01000"
+              telefono: "+52 55 1234 5678"
+              email: info@laspalmas.com
+              totalUnidades: 50
+              gerenteId: 123e4567-e89b-12d3-a456-426614174000
+              thumbnail: https://storage.example.com/condos/laspalmas.jpg
+              statusCondominio: activo
+      responses:
+        '201':
+          description: Condominium created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Condominio creado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Condominio'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /condominios/gerente/{gerenteId}:
+    get:
+      tags:
+        - Condominios
+      summary: Get condominiums by gerente
+      description: Returns all condominiums managed by a specific gerente/condoAdmin (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: gerenteId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Gerente/CondoAdmin user ID
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Condominiums retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  results:
+                    type: integer
+                    example: 3
+                  data:
+                    type: object
+                    properties:
+                      gerente:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          nombre:
+                            type: string
+                            example: Juan
+                          apellido:
+                            type: string
+                            example: García
+                          email:
+                            type: string
+                            example: juan.garcia@example.com
+                          rol:
+                            type: string
+                            example: condoAdmin
+                      condominios:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Condominio'
+              example:
+                status: success
+                results: 2
+                data:
+                  gerente:
+                    id: 123e4567-e89b-12d3-a456-426614174000
+                    nombre: Juan
+                    apellido: García
+                    email: juan.garcia@example.com
+                    rol: condoAdmin
+                  condominios:
+                    - id: 987e6543-e21b-45d6-a789-987654321000
+                      nombre: Residencial Las Palmas
+                      direccion: Av. Principal 123
+                      ciudad: Ciudad de México
+                      estado: CDMX
+                      codigoPostal: "01000"
+                      telefono: "+52 55 1234 5678"
+                      email: info@laspalmas.com
+                      totalUnidades: 50
+                      gerenteId: 123e4567-e89b-12d3-a456-426614174000
+                      thumbnail: https://storage.example.com/condos/laspalmas.jpg
+                      statusCondominio: activo
+                      activo: true
+                      totalUnits: 50
+                      occupiedUnits: 35
+                      availableUnits: 15
+                      occupationRate: "70.00%"
+                      status: activo
+                      createdAt: "2025-01-01T00:00:00Z"
+                      updatedAt: "2025-01-01T00:00:00Z"
+                    - id: 456e7890-e12b-34d5-a678-123456789000
+                      nombre: Torres del Sol
+                      direccion: Calle 45 #100
+                      ciudad: Guadalajara
+                      estado: Jalisco
+                      codigoPostal: "44100"
+                      telefono: "+52 33 9876 5432"
+                      email: contacto@torresdelsol.com
+                      totalUnidades: 35
+                      gerenteId: 123e4567-e89b-12d3-a456-426614174000
+                      thumbnail: https://storage.example.com/condos/torresdelsol.jpg
+                      statusCondominio: activo
+                      activo: true
+                      totalUnits: 35
+                      occupiedUnits: 28
+                      availableUnits: 7
+                      occupationRate: "80.00%"
+                      status: activo
+                      createdAt: "2025-01-15T00:00:00Z"
+                      updatedAt: "2025-01-15T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Gerente not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Gerente no encontrado
+                statusCode: 404
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /condominios/{id}:
+    get:
+      tags:
+        - Condominios
+      summary: Get condominium by ID
+      description: Returns a single condominium by ID (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Condominium ID
+      responses:
+        '200':
+          description: Condominium retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Condominio'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Condominios
+      summary: Update condominium
+      description: Updates condominium information (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Condominium ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCondominioRequest'
+      responses:
+        '200':
+          description: Condominium updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Condominio actualizado exitosamente
+                  data:
+                    $ref: '#/components/schemas/Condominio'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Condominios
+      summary: Delete condominium (soft delete)
+      description: Deactivates a condominium (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Condominium ID
+      responses:
+        '200':
+          description: Condominium deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Condominio eliminado exitosamente
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

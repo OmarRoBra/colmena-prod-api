@@ -1,0 +1,222 @@
+paths:
+  /reservaciones:
+    get:
+      tags:
+        - Reservaciones
+      summary: Get all reservations
+      description: Returns a list of all reservations (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Reservations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reservacion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Reservaciones
+      summary: Create a new reservation
+      description: Creates a new common area reservation (all authenticated users)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [condominioId, unidadId, usuarioId, area, fechaInicio, fechaFin]
+              properties:
+                condominioId:
+                  type: string
+                  format: uuid
+                unidadId:
+                  type: string
+                  format: uuid
+                usuarioId:
+                  type: string
+                  format: uuid
+                area:
+                  type: string
+                  maxLength: 100
+                fechaInicio:
+                  type: string
+                  format: date-time
+                fechaFin:
+                  type: string
+                  format: date-time
+                costo:
+                  type: number
+                  default: 0
+                notas:
+                  type: string
+            example:
+              condominioId: 123e4567-e89b-12d3-a456-426614174000
+              unidadId: 987e6543-e21b-45d6-a789-987654321000
+              usuarioId: 111e2222-e33b-44d5-a666-777888999000
+              area: Salón de fiestas
+              fechaInicio: "2025-02-15T18:00:00Z"
+              fechaFin: "2025-02-15T23:00:00Z"
+              costo: 500.00
+              notas: Cumpleaños familiar
+      responses:
+        '201':
+          description: Reservation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reservación creada exitosamente
+                  data:
+                    $ref: '#/components/schemas/Reservacion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /reservaciones/{id}:
+    get:
+      tags:
+        - Reservaciones
+      summary: Get reservation by ID
+      description: Returns a single reservation (filtered by role in controller)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Reservation ID
+      responses:
+        '200':
+          description: Reservation retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Reservacion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Reservaciones
+      summary: Update reservation
+      description: Updates reservation status (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Reservation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado:
+                  type: string
+                  enum: [pendiente, confirmado, cancelado]
+                notas:
+                  type: string
+            example:
+              estado: confirmado
+      responses:
+        '200':
+          description: Reservation updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reservación actualizada exitosamente
+                  data:
+                    $ref: '#/components/schemas/Reservacion'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Reservaciones
+      summary: Delete reservation
+      description: Deletes a reservation (admin and condoAdmin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Reservation ID
+      responses:
+        '200':
+          description: Reservation deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Reservación eliminada exitosamente
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
