@@ -22,12 +22,12 @@ router.get(
 );
 
 /**
- * @route   GET /api/v1/unidades/condominio/:condominioId
+ * @route   GET /api/v1/unidades/condominio/:condominiumId
  * @desc    Get unidades by condominio ID
  * @access  Private (admin, condoAdmin)
  */
 router.get(
-  '/condominio/:condominioId',
+  '/condominio/:condominiumId',
   authorize('admin', 'condoAdmin'),
   unidadesDto.getUnidadesByCondominioValidation,
   cache({ ttl: CacheTTL.MEDIUM }),

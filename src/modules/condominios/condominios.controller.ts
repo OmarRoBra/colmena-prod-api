@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { eq, count, and, or, isNotNull, sql } from 'drizzle-orm';
+import { eq, count, and } from 'drizzle-orm';
 import { db } from '../../db';
 import { condominios, usuarios, unidades } from '../../db/schema';
 import { AppError } from '../../utils/appError';
@@ -38,17 +38,14 @@ export const getAllCondominios = async (
     // Calculate occupation for each condominio
     const condominiosWithOccupation = await Promise.all(
       allCondominios.map(async (condo) => {
-        // Count occupied units (units with owner or tenant)
+        // Count occupied units (units with estado = 'occupied')
         const [occupiedCount] = await db
           .select({ count: count() })
           .from(unidades)
           .where(
             and(
-              eq(unidades.condominioId, condo.id),
-              or(
-                isNotNull(unidades.propietarioId),
-                isNotNull(unidades.inquilinoId)
-              )
+              eq(unidades.condominiumId, condo.id),
+              eq(unidades.estado, 'Ocupado')
             )
           );
 
@@ -112,11 +109,8 @@ export const getCondominioById = async (
       .from(unidades)
       .where(
         and(
-          eq(unidades.condominioId, condominio.id),
-          or(
-            isNotNull(unidades.propietarioId),
-            isNotNull(unidades.inquilinoId)
-          )
+          eq(unidades.condominiumId, condominio.id),
+          eq(unidades.estado, 'Ocupado')
         )
       );
 
@@ -196,17 +190,14 @@ export const getCondominiosByGerente = async (
     // Calculate occupation for each condominio
     const condominiosWithOccupation = await Promise.all(
       condominiosList.map(async (condo) => {
-        // Count occupied units (units with owner or tenant)
+        // Count occupied units (units with estado = 'occupied')
         const [occupiedCount] = await db
           .select({ count: count() })
           .from(unidades)
           .where(
             and(
-              eq(unidades.condominioId, condo.id),
-              or(
-                isNotNull(unidades.propietarioId),
-                isNotNull(unidades.inquilinoId)
-              )
+              eq(unidades.condominiumId, condo.id),
+              eq(unidades.estado, 'Ocupado')
             )
           );
 

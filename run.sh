@@ -82,22 +82,15 @@ DB_DATABASE=condominio_management
 DB_SYNCHRONIZE=true
 DB_LOGGING=true
 
-# JWT
-JWT_SECRET=change-this-secret-in-production
-JWT_EXPIRATION=7d
-JWT_REFRESH_SECRET=change-this-refresh-secret
-JWT_REFRESH_EXPIRATION=30d
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_JWT_SECRET=your-supabase-jwt-secret
 
 # Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
-
-# AWS S3
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=condominio-documents
 
 # Email
 MAIL_HOST=smtp.gmail.com
@@ -188,13 +181,13 @@ if [ "$install_deps" = "s" ] || [ "$install_deps" = "S" ]; then
     
     # Dependencias de producción
     npm install express typeorm pg reflect-metadata dotenv cors helmet morgan \
-                compression bcrypt jsonwebtoken joi multer aws-sdk nodemailer \
+                compression joi nodemailer @supabase/supabase-js \
                 bull ioredis moment uuid express-validator winston express-async-errors \
                 express-rate-limit
     
     # Dependencias de desarrollo
     npm install -D typescript @types/node @types/express @types/cors @types/morgan \
-                   @types/bcrypt @types/jsonwebtoken @types/multer @types/nodemailer \
+                   @types/nodemailer \
                    @types/uuid @types/compression nodemon ts-node rimraf eslint \
                    @typescript-eslint/eslint-plugin @typescript-eslint/parser \
                    jest @types/jest ts-jest supertest @types/supertest

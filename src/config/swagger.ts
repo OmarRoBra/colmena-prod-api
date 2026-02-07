@@ -59,6 +59,7 @@ Luego incluye el token en el header Authorization: \`Bearer {token}\`
     { name: 'Reglamentos', description: 'Rules and regulations' },
     { name: 'Mantenimiento', description: 'Maintenance requests' },
     { name: 'Trabajadores', description: 'Workers/staff management' },
+    { name: 'Residentes', description: 'Resident management' },
   ],
   components: {
     securitySchemes: {
@@ -155,7 +156,6 @@ Luego incluye el token en el header Authorization: \`Bearer {token}\`
             example: 'owner',
           },
           activo: { type: 'boolean', example: true },
-          emailVerificado: { type: 'boolean', example: false },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },

@@ -1,10 +1,61 @@
 import { body, param } from 'express-validator';
 
+// ==========================================
+// Type Interfaces
+// ==========================================
+export interface UnitDTO {
+  id: string
+  condominiumId: string
+  numero: string
+  tipo: string
+  area: number
+  propietario: string
+  estado: string
+  habitaciones: number
+  banos: number
+  estacionamientos: number
+  cuotaMantenimiento: number
+  notas?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateUnitDTO {
+  condominiumId: string
+  numero: string
+  tipo: string
+  area: number
+  propietario: string
+  estado?: string
+  habitaciones?: number
+  banos?: number
+  estacionamientos?: number
+  cuotaMantenimiento: number
+  notas?: string
+}
+
+export interface UpdateUnitDTO {
+  numero?: string
+  tipo?: string
+  area?: number
+  propietario?: string
+  estado?: string
+  habitaciones?: number
+  banos?: number
+  estacionamientos?: number
+  cuotaMantenimiento?: number
+  notas?: string
+}
+
+// ==========================================
+// Validation Rules
+// ==========================================
+
 /**
  * Validation rules for creating a unidad
  */
 export const createUnidadValidation = [
-  body('condominioId')
+  body('condominiumId')
     .notEmpty()
     .withMessage('El ID del condominio es requerido')
     .isUUID()
@@ -17,22 +68,30 @@ export const createUnidadValidation = [
     .isLength({ max: 50 })
     .withMessage('El número de unidad no debe exceder 50 caracteres'),
 
-  body('propietarioId')
-    .optional()
-    .isUUID()
-    .withMessage('ID de propietario inválido'),
-
   body('tipo')
     .trim()
     .notEmpty()
     .withMessage('El tipo de unidad es requerido')
-    .isIn(['departamento', 'casa', 'local'])
-    .withMessage('El tipo debe ser departamento, casa o local'),
+    .isIn(['Apartamento', 'Casa', 'Local Comercial', 'Estacionamiento'])
+    .withMessage('El tipo debe ser Apartamento, Casa, Local Comercial o Estacionamiento'),
 
-  body('metrosCuadrados')
-    .optional()
+  body('area')
+    .notEmpty()
+    .withMessage('El área es requerida')
     .isDecimal()
-    .withMessage('Metros cuadrados debe ser un número decimal'),
+    .withMessage('El área debe ser un número decimal'),
+
+  body('propietario')
+    .trim()
+    .notEmpty()
+    .withMessage('El propietario es requerido')
+    .isLength({ max: 200 })
+    .withMessage('El nombre del propietario no debe exceder 200 caracteres'),
+
+  body('estado')
+    .optional()
+    .isIn(['Ocupado', 'Vacío', 'Mantenimiento'])
+    .withMessage('Estado debe ser Ocupado, Vacío o Mantenimiento'),
 
   body('habitaciones')
     .optional()
@@ -55,10 +114,10 @@ export const createUnidadValidation = [
     .isDecimal()
     .withMessage('La cuota de mantenimiento debe ser un número decimal'),
 
-  body('estadoPago')
+  body('notas')
     .optional()
-    .isIn(['al_corriente', 'atrasado', 'moroso'])
-    .withMessage('Estado de pago debe ser al_corriente, atrasado o moroso'),
+    .isString()
+    .withMessage('Las notas deben ser texto'),
 ];
 
 /**
@@ -75,20 +134,26 @@ export const updateUnidadValidation = [
     .isLength({ max: 50 })
     .withMessage('El número de unidad no debe exceder 50 caracteres'),
 
-  body('propietarioId')
-    .optional()
-    .isUUID()
-    .withMessage('ID de propietario inválido'),
-
   body('tipo')
     .optional()
-    .isIn(['departamento', 'casa', 'local'])
-    .withMessage('El tipo debe ser departamento, casa o local'),
+    .isIn(['Apartamento', 'Casa', 'Local Comercial', 'Estacionamiento'])
+    .withMessage('El tipo debe ser Apartamento, Casa, Local Comercial o Estacionamiento'),
 
-  body('metrosCuadrados')
+  body('area')
     .optional()
     .isDecimal()
-    .withMessage('Metros cuadrados debe ser un número decimal'),
+    .withMessage('El área debe ser un número decimal'),
+
+  body('propietario')
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('El nombre del propietario no debe exceder 200 caracteres'),
+
+  body('estado')
+    .optional()
+    .isIn(['Ocupado', 'Vacío', 'Mantenimiento'])
+    .withMessage('Estado debe ser Ocupado, Vacío o Mantenimiento'),
 
   body('habitaciones')
     .optional()
@@ -110,15 +175,10 @@ export const updateUnidadValidation = [
     .isDecimal()
     .withMessage('La cuota de mantenimiento debe ser un número decimal'),
 
-  body('estadoPago')
+  body('notas')
     .optional()
-    .isIn(['al_corriente', 'atrasado', 'moroso'])
-    .withMessage('Estado de pago debe ser al_corriente, atrasado o moroso'),
-
-  body('activo')
-    .optional()
-    .isBoolean()
-    .withMessage('Activo debe ser un valor booleano'),
+    .isString()
+    .withMessage('Las notas deben ser texto'),
 ];
 
 /**
@@ -134,7 +194,7 @@ export const getUnidadValidation = [
  * Validation rules for getting unidades by condominio
  */
 export const getUnidadesByCondominioValidation = [
-  param('condominioId')
+  param('condominiumId')
     .isUUID()
     .withMessage('ID de condominio inválido'),
 ];

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db';
-import { unidades, condominios, usuarios } from '../../db/schema';
+import { unidades, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
 
@@ -82,13 +82,13 @@ export const getUnidadesByCondominio = async (
       );
     }
 
-    const { condominioId } = req.params;
+    const { condominiumId } = req.params;
 
     // Verify condominio exists
     const [condominio] = await db
       .select()
       .from(condominios)
-      .where(eq(condominios.id, condominioId))
+      .where(eq(condominios.id, condominiumId))
       .limit(1);
 
     if (!condominio) {
@@ -98,7 +98,7 @@ export const getUnidadesByCondominio = async (
     const unidadesCondominio = await db
       .select()
       .from(unidades)
-      .where(eq(unidades.condominioId, condominioId));
+      .where(eq(unidades.condominiumId, condominiumId));
 
     res.status(200).json({
       status: 'success',
@@ -128,16 +128,16 @@ export const createUnidad = async (
     }
 
     const {
-      condominioId,
+      condominiumId,
       numero,
-      propietarioId,
       tipo,
-      metrosCuadrados,
+      area,
+      propietario,
+      estado,
       habitaciones,
       banos,
       estacionamientos,
       cuotaMantenimiento,
-      estadoPago,
       notas,
     } = req.body;
 
@@ -145,24 +145,11 @@ export const createUnidad = async (
     const [condominio] = await db
       .select()
       .from(condominios)
-      .where(eq(condominios.id, condominioId))
+      .where(eq(condominios.id, condominiumId))
       .limit(1);
 
     if (!condominio) {
       return next(AppError.notFound('Condominio no encontrado'));
-    }
-
-    // If propietarioId is provided, verify it exists
-    if (propietarioId) {
-      const [propietario] = await db
-        .select()
-        .from(usuarios)
-        .where(eq(usuarios.id, propietarioId))
-        .limit(1);
-
-      if (!propietario) {
-        return next(AppError.notFound('Propietario no encontrado'));
-      }
     }
 
     // Check if unit number already exists in this condominio
@@ -171,7 +158,7 @@ export const createUnidad = async (
       .from(unidades)
       .where(
         and(
-          eq(unidades.condominioId, condominioId),
+          eq(unidades.condominiumId, condominiumId),
           eq(unidades.numero, numero)
         )
       )
@@ -189,21 +176,23 @@ export const createUnidad = async (
     const [newUnidad] = await db
       .insert(unidades)
       .values({
-        condominioId,
+        condominiumId,
         numero,
-        propietarioId,
         tipo,
-        metrosCuadrados,
-        habitaciones,
-        banos,
+        area,
+        propietario,
+        estado: estado || 'Vacío',
+        habitaciones: habitaciones || 0,
+        banos: banos || 0,
         estacionamientos: estacionamientos || 0,
         cuotaMantenimiento,
-        estadoPago: estadoPago || 'al_corriente',
         notas,
       })
       .returning();
 
-    logger.info(`Unidad created: ${newUnidad.numero} in condominio ${condominioId}`);
+    logger.info(
+      `Unidad created: ${newUnidad.numero} in condominio ${condominiumId}`
+    );
 
     res.status(201).json({
       status: 'success',
@@ -235,16 +224,15 @@ export const updateUnidad = async (
     const { id } = req.params;
     const {
       numero,
-      propietarioId,
       tipo,
-      metrosCuadrados,
+      area,
+      propietario,
+      estado,
       habitaciones,
       banos,
       estacionamientos,
       cuotaMantenimiento,
-      estadoPago,
       notas,
-      activo,
     } = req.body;
 
     // Check if unidad exists
@@ -258,19 +246,6 @@ export const updateUnidad = async (
       return next(AppError.notFound('Unidad no encontrada'));
     }
 
-    // If propietarioId is provided, verify it exists
-    if (propietarioId) {
-      const [propietario] = await db
-        .select()
-        .from(usuarios)
-        .where(eq(usuarios.id, propietarioId))
-        .limit(1);
-
-      if (!propietario) {
-        return next(AppError.notFound('Propietario no encontrado'));
-      }
-    }
-
     // If numero is being updated, check for duplicates
     if (numero && numero !== existingUnidad.numero) {
       const [duplicateUnidad] = await db
@@ -278,7 +253,7 @@ export const updateUnidad = async (
         .from(unidades)
         .where(
           and(
-            eq(unidades.condominioId, existingUnidad.condominioId),
+            eq(unidades.condominiumId, existingUnidad.condominiumId),
             eq(unidades.numero, numero)
           )
         )
@@ -298,16 +273,15 @@ export const updateUnidad = async (
       .update(unidades)
       .set({
         ...(numero && { numero }),
-        ...(propietarioId !== undefined && { propietarioId }),
         ...(tipo && { tipo }),
-        ...(metrosCuadrados !== undefined && { metrosCuadrados }),
+        ...(area !== undefined && { area }),
+        ...(propietario !== undefined && { propietario }),
+        ...(estado !== undefined && { estado }),
         ...(habitaciones !== undefined && { habitaciones }),
         ...(banos !== undefined && { banos }),
         ...(estacionamientos !== undefined && { estacionamientos }),
         ...(cuotaMantenimiento !== undefined && { cuotaMantenimiento }),
-        ...(estadoPago && { estadoPago }),
         ...(notas !== undefined && { notas }),
-        ...(activo !== undefined && { activo }),
         updatedAt: new Date(),
       })
       .where(eq(unidades.id, id))
@@ -327,7 +301,7 @@ export const updateUnidad = async (
 };
 
 /**
- * Delete unidad (soft delete)
+ * Delete unidad
  */
 export const deleteUnidad = async (
   req: Request,
@@ -355,20 +329,16 @@ export const deleteUnidad = async (
       return next(AppError.notFound('Unidad no encontrada'));
     }
 
-    // Soft delete (deactivate unidad)
+    // Hard delete the unidad
     await db
-      .update(unidades)
-      .set({
-        activo: false,
-        updatedAt: new Date(),
-      })
+      .delete(unidades)
       .where(eq(unidades.id, id));
 
-    logger.info(`Unidad deactivated: ${id}`);
+    logger.info(`Unidad deleted: ${id}`);
 
     res.status(200).json({
       status: 'success',
-      message: 'Unidad desactivada exitosamente',
+      message: 'Unidad eliminada exitosamente',
     });
   } catch (error) {
     logger.error('Error in deleteUnidad:', error);

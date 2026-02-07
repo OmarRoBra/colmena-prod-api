@@ -19,11 +19,11 @@ export const config = {
     logging: process.env.DB_LOGGING === 'true',
   },
 
-  jwt: {
-    secret: process.env.JWT_SECRET || 'change-this-secret',
-    expiration: process.env.JWT_EXPIRATION || '7d',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'change-this-refresh-secret',
-    refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '30d',
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    jwtSecret: process.env.SUPABASE_JWT_SECRET || '',
+    anonKey: process.env.SUPABASE_ANON_KEY || '',
   },
 
   redis: {
@@ -35,13 +35,6 @@ export const config = {
       keyPrefix: process.env.REDIS_CACHE_PREFIX || 'colmena:cache:',
       defaultTTL: parseInt(process.env.REDIS_CACHE_DEFAULT_TTL || '300', 10),
     },
-  },
-
-  aws: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    region: process.env.AWS_REGION || 'us-east-1',
-    s3Bucket: process.env.AWS_S3_BUCKET || '',
   },
 
   mail: {

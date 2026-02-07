@@ -7,17 +7,15 @@ const router = Router();
 
 /**
  * @route   POST /api/v1/auth/register
- * @desc    Register a new user
- * @access  Public
+ * @desc    Create user profile (requires Supabase auth session)
+ * @access  Private (must have valid Supabase token)
  */
-router.post('/register', authDto.registerValidation, authController.register);
-
-/**
- * @route   POST /api/v1/auth/login
- * @desc    Login user
- * @access  Public
- */
-router.post('/login', authDto.loginValidation, authController.login);
+router.post(
+  '/register',
+  authenticate,
+  authDto.registerValidation,
+  authController.register
+);
 
 /**
  * @route   GET /api/v1/auth/profile
@@ -25,17 +23,5 @@ router.post('/login', authDto.loginValidation, authController.login);
  * @access  Private
  */
 router.get('/profile', authenticate, authController.getProfile);
-
-/**
- * @route   PUT /api/v1/auth/change-password
- * @desc    Change user password
- * @access  Private
- */
-router.put(
-  '/change-password',
-  authenticate,
-  authDto.changePasswordValidation,
-  authController.changePassword
-);
 
 export default router;

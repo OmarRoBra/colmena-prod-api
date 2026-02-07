@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import * as bcrypt from 'bcrypt';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { usuarios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { supabaseAdmin } from '../../config/supabase';
 
 /**
  * Get all users
@@ -25,7 +25,6 @@ export const getAllUsuarios = async (
         telefono: usuarios.telefono,
         rol: usuarios.rol,
         activo: usuarios.activo,
-        emailVerificado: usuarios.emailVerificado,
         createdAt: usuarios.createdAt,
       })
       .from(usuarios);
@@ -68,7 +67,6 @@ export const getUsuarioById = async (
         telefono: usuarios.telefono,
         rol: usuarios.rol,
         activo: usuarios.activo,
-        emailVerificado: usuarios.emailVerificado,
         createdAt: usuarios.createdAt,
         updatedAt: usuarios.updatedAt,
       })
@@ -108,7 +106,7 @@ export const createUsuario = async (
 
     const { nombre, apellido, email, password, telefono, rol } = req.body;
 
-    // Check if email already exists
+    // Check if email already exists in our table
     const existingUser = await db
       .select()
       .from(usuarios)
@@ -116,22 +114,30 @@ export const createUsuario = async (
       .limit(1);
 
     if (existingUser.length > 0) {
-      return next(AppError.conflict('El email ya está registrado'));
+      return next(AppError.conflict('El email ya est\u00e1 registrado'));
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.toLowerCase(),
+      password,
+      email_confirm: true,
+    });
 
-    // Create user
+    if (authError) {
+      return next(AppError.badRequest(`Error creando usuario en auth: ${authError.message}`));
+    }
+
+    // Create profile in usuarios table
     const [newUsuario] = await db
       .insert(usuarios)
       .values({
+        id: authData.user.id,
         nombre,
         apellido,
         email: email.toLowerCase(),
-        password: hashedPassword,
         telefono,
-        rol: rol || 'residente',
+        rol: rol || 'owner',
       })
       .returning({
         id: usuarios.id,

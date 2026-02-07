@@ -1,21 +1,27 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, decimal, json } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  decimal,
+  json,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ==========================================
 // USUARIOS (Users)
 // ==========================================
 export const usuarios = pgTable('usuarios', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: uuid('id').primaryKey(), // Matches Supabase auth.users.id
   nombre: varchar('nombre', { length: 100 }).notNull(),
   apellido: varchar('apellido', { length: 100 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  password: varchar('password', { length: 255 }).notNull(),
   telefono: varchar('telefono', { length: 20 }),
   rol: varchar('rol', { length: 50 }).notNull().default('owner'), // admin, condoAdmin, owner, tenant, worker, serviceProvider
   activo: boolean('activo').notNull().default(true),
-  emailVerificado: boolean('email_verificado').notNull().default(false),
-  resetPasswordToken: varchar('reset_password_token', { length: 255 }),
-  resetPasswordExpires: timestamp('reset_password_expires'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -36,7 +42,9 @@ export const condominios = pgTable('condominios', {
   gerenteId: uuid('gerente_id').references(() => usuarios.id),
   thumbnail: varchar('thumbnail', { length: 500 }), // URL to condominium image/thumbnail
   configuracion: json('configuracion'), // JSON for custom settings
-  statusCondominio: varchar('status_condominio', { length: 20 }).notNull().default('activo'), // activo, inactivo, archivado
+  statusCondominio: varchar('status_condominio', { length: 20 })
+    .notNull()
+    .default('activo'), // activo, inactivo, archivado
   activo: boolean('activo').notNull().default(true), // Deprecated: use statusCondominio instead
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -47,19 +55,22 @@ export const condominios = pgTable('condominios', {
 // ==========================================
 export const unidades = pgTable('unidades', {
   id: uuid('id').defaultRandom().primaryKey(),
-  condominioId: uuid('condominio_id').notNull().references(() => condominios.id, { onDelete: 'cascade' }),
+  condominiumId: uuid('condominium_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
   numero: varchar('numero', { length: 50 }).notNull(), // Unit number
-  propietarioId: uuid('propietario_id').references(() => usuarios.id),
-  inquilinoId: uuid('inquilino_id').references(() => usuarios.id), // Tenant/renter
-  tipo: varchar('tipo', { length: 50 }).notNull(), // departamento, casa, local
-  metrosCuadrados: decimal('metros_cuadrados', { precision: 10, scale: 2 }),
-  habitaciones: integer('habitaciones'),
-  banos: integer('banos'),
-  estacionamientos: integer('estacionamientos').default(0),
-  cuotaMantenimiento: decimal('cuota_mantenimiento', { precision: 10, scale: 2 }).notNull(),
-  estadoPago: varchar('estado_pago', { length: 50 }).default('al_corriente'), // al_corriente, atrasado, moroso
+  tipo: varchar('tipo', { length: 50 }).notNull(), // Apartamento, Casa, Local Comercial, Estacionamiento
+  area: decimal('area', { precision: 10, scale: 2 }).notNull(),
+  propietario: varchar('propietario', { length: 200 }).notNull(), // Owner name
+  estado: varchar('estado', { length: 50 }).notNull().default('Vacío'), // Ocupado, Vacío, Mantenimiento
+  habitaciones: integer('habitaciones').notNull().default(0),
+  banos: integer('banos').notNull().default(0),
+  estacionamientos: integer('estacionamientos').notNull().default(0),
+  cuotaMantenimiento: decimal('cuota_mantenimiento', {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
   notas: text('notas'),
-  activo: boolean('activo').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -69,8 +80,12 @@ export const unidades = pgTable('unidades', {
 // ==========================================
 export const pagos = pgTable('pagos', {
   id: uuid('id').defaultRandom().primaryKey(),
-  unidadId: uuid('unidad_id').notNull().references(() => unidades.id, { onDelete: 'cascade' }),
-  usuarioId: uuid('usuario_id').notNull().references(() => usuarios.id),
+  unidadId: uuid('unidad_id')
+    .notNull()
+    .references(() => unidades.id, { onDelete: 'cascade' }),
+  usuarioId: uuid('usuario_id')
+    .notNull()
+    .references(() => usuarios.id),
   monto: decimal('monto', { precision: 10, scale: 2 }).notNull(),
   concepto: varchar('concepto', { length: 200 }).notNull(),
   metodoPago: varchar('metodo_pago', { length: 50 }).notNull(), // efectivo, transferencia, tarjeta
@@ -88,9 +103,15 @@ export const pagos = pgTable('pagos', {
 // ==========================================
 export const reservaciones = pgTable('reservaciones', {
   id: uuid('id').defaultRandom().primaryKey(),
-  condominioId: uuid('condominio_id').notNull().references(() => condominios.id, { onDelete: 'cascade' }),
-  unidadId: uuid('unidad_id').notNull().references(() => unidades.id),
-  usuarioId: uuid('usuario_id').notNull().references(() => usuarios.id),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  unidadId: uuid('unidad_id')
+    .notNull()
+    .references(() => unidades.id),
+  usuarioId: uuid('usuario_id')
+    .notNull()
+    .references(() => usuarios.id),
   area: varchar('area', { length: 100 }).notNull(), // salon, terraza, gym, etc.
   fechaInicio: timestamp('fecha_inicio').notNull(),
   fechaFin: timestamp('fecha_fin').notNull(),
@@ -106,7 +127,9 @@ export const reservaciones = pgTable('reservaciones', {
 // ==========================================
 export const asambleas = pgTable('asambleas', {
   id: uuid('id').defaultRandom().primaryKey(),
-  condominioId: uuid('condominio_id').notNull().references(() => condominios.id, { onDelete: 'cascade' }),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
   titulo: varchar('titulo', { length: 200 }).notNull(),
   descripcion: text('descripcion'),
   fecha: timestamp('fecha').notNull(),
@@ -124,7 +147,9 @@ export const asambleas = pgTable('asambleas', {
 // ==========================================
 export const reglamentos = pgTable('reglamentos', {
   id: uuid('id').defaultRandom().primaryKey(),
-  condominioId: uuid('condominio_id').notNull().references(() => condominios.id, { onDelete: 'cascade' }),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
   titulo: varchar('titulo', { length: 200 }).notNull(),
   contenido: text('contenido').notNull(),
   categoria: varchar('categoria', { length: 100 }), // general, mascotas, ruido, estacionamiento, etc.
@@ -140,9 +165,13 @@ export const reglamentos = pgTable('reglamentos', {
 // ==========================================
 export const mantenimiento = pgTable('mantenimiento', {
   id: uuid('id').defaultRandom().primaryKey(),
-  condominioId: uuid('condominio_id').notNull().references(() => condominios.id, { onDelete: 'cascade' }),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
   unidadId: uuid('unidad_id').references(() => unidades.id),
-  solicitanteId: uuid('solicitante_id').notNull().references(() => usuarios.id),
+  solicitanteId: uuid('solicitante_id')
+    .notNull()
+    .references(() => usuarios.id),
   titulo: varchar('titulo', { length: 200 }).notNull(),
   descripcion: text('descripcion').notNull(),
   categoria: varchar('categoria', { length: 100 }).notNull(), // fontaneria, electricidad, pintura, etc.
@@ -159,11 +188,35 @@ export const mantenimiento = pgTable('mantenimiento', {
 });
 
 // ==========================================
+// RESIDENTES (Residents)
+// ==========================================
+export const residentes = pgTable('residentes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  unidadId: uuid('unidad_id')
+    .notNull()
+    .references(() => unidades.id, { onDelete: 'cascade' }),
+  nombre: varchar('nombre', { length: 200 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  telefono: varchar('telefono', { length: 20 }).notNull(),
+  tipo: varchar('tipo', { length: 50 }).notNull().default('Propietario'), // Propietario, Inquilino, Familiar
+  fechaIngreso: timestamp('fecha_ingreso').notNull(),
+  documentoIdentidad: varchar('documento_identidad', { length: 50 }),
+  contactoEmergencia: varchar('contacto_emergencia', { length: 200 }),
+  telefonoEmergencia: varchar('telefono_emergencia', { length: 20 }),
+  notas: text('notas'),
+  activo: boolean('activo').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
 // TRABAJADORES (Workers/Staff)
 // ==========================================
 export const trabajadores = pgTable('trabajadores', {
   id: uuid('id').defaultRandom().primaryKey(),
-  condominioId: uuid('condominio_id').notNull().references(() => condominios.id, { onDelete: 'cascade' }),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
   nombre: varchar('nombre', { length: 100 }).notNull(),
   apellido: varchar('apellido', { length: 100 }).notNull(),
   puesto: varchar('puesto', { length: 100 }).notNull(), // conserje, jardinero, mantenimiento, seguridad
@@ -183,8 +236,6 @@ export const trabajadores = pgTable('trabajadores', {
 // ==========================================
 export const usuariosRelations = relations(usuarios, ({ many }) => ({
   condominiosGestionados: many(condominios),
-  unidadesPropias: many(unidades, { relationName: 'propietario' }),
-  unidadesRentadas: many(unidades, { relationName: 'inquilino' }),
   pagos: many(pagos),
   reservaciones: many(reservaciones),
   solicitudesMantenimiento: many(mantenimiento),
@@ -205,19 +256,17 @@ export const condominiosRelations = relations(condominios, ({ one, many }) => ({
 
 export const unidadesRelations = relations(unidades, ({ one, many }) => ({
   condominio: one(condominios, {
-    fields: [unidades.condominioId],
+    fields: [unidades.condominiumId],
     references: [condominios.id],
   }),
-  propietario: one(usuarios, {
-    fields: [unidades.propietarioId],
-    references: [usuarios.id],
-    relationName: 'propietario',
-  }),
-  inquilino: one(usuarios, {
-    fields: [unidades.inquilinoId],
-    references: [usuarios.id],
-    relationName: 'inquilino',
-  }),
+  residentes: many(residentes),
   pagos: many(pagos),
   reservaciones: many(reservaciones),
+}));
+
+export const residentesRelations = relations(residentes, ({ one }) => ({
+  unidad: one(unidades, {
+    fields: [residentes.unidadId],
+    references: [unidades.id],
+  }),
 }));

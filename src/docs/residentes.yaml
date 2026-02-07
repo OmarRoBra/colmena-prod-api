@@ -1,15 +1,15 @@
 paths:
-  /unidades:
+  /residentes:
     get:
       tags:
-        - Unidades
-      summary: Get all units
-      description: Returns a list of all units (admin and condoAdmin only)
+        - Residentes
+      summary: Get all residents
+      description: Returns a list of all residents (admin and condoAdmin only)
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Units retrieved successfully
+          description: Residents retrieved successfully
           content:
             application/json:
               schema:
@@ -24,10 +24,10 @@ paths:
                   data:
                     type: object
                     properties:
-                      unidades:
+                      residentes:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Unidad'
+                          $ref: '#/components/schemas/Residente'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -35,9 +35,9 @@ paths:
 
     post:
       tags:
-        - Unidades
-      summary: Create a new unit
-      description: Creates a new unit (admin and condoAdmin only)
+        - Residentes
+      summary: Create a new resident
+      description: Creates a new resident (admin and condoAdmin only)
       security:
         - bearerAuth: []
       requestBody:
@@ -45,22 +45,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateUnidadRequest'
+              $ref: '#/components/schemas/CreateResidenteRequest'
             example:
-              condominiumId: 123e4567-e89b-12d3-a456-426614174000
-              numero: "A-101"
-              tipo: Apartamento
-              area: 85.5
-              propietario: "Juan Pérez"
-              estado: Vacío
-              habitaciones: 2
-              banos: 2
-              estacionamientos: 1
-              cuotaMantenimiento: 1500.00
-              notas: "Unidad con vista al parque"
+              unidadId: 123e4567-e89b-12d3-a456-426614174000
+              nombre: "Juan Pérez García"
+              email: "juan.perez@email.com"
+              telefono: "5512345678"
+              tipo: Propietario
+              fechaIngreso: "2024-01-15T00:00:00.000Z"
+              documentoIdentidad: "ABC123456"
+              contactoEmergencia: "María Pérez"
+              telefonoEmergencia: "5587654321"
+              notas: "Residente principal de la unidad"
       responses:
         '201':
-          description: Unit created successfully
+          description: Resident created successfully
           content:
             application/json:
               schema:
@@ -71,12 +70,12 @@ paths:
                     example: success
                   message:
                     type: string
-                    example: Unidad creada exitosamente
+                    example: Residente creado exitosamente
                   data:
                     type: object
                     properties:
-                      unidad:
-                        $ref: '#/components/schemas/Unidad'
+                      residente:
+                        $ref: '#/components/schemas/Residente'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -84,25 +83,25 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
-  /unidades/condominio/{condominiumId}:
+  /residentes/unidad/{unidadId}:
     get:
       tags:
-        - Unidades
-      summary: Get units by condominium
-      description: Returns all units belonging to a specific condominium (admin and condoAdmin only)
+        - Residentes
+      summary: Get residents by unit
+      description: Returns all residents belonging to a specific unit
       security:
         - bearerAuth: []
       parameters:
         - in: path
-          name: condominiumId
+          name: unidadId
           required: true
           schema:
             type: string
             format: uuid
-          description: Condominium ID
+          description: Unit ID
       responses:
         '200':
-          description: Units retrieved successfully
+          description: Residents retrieved successfully
           content:
             application/json:
               schema:
@@ -113,14 +112,14 @@ paths:
                     example: success
                   results:
                     type: integer
-                    example: 5
+                    example: 3
                   data:
                     type: object
                     properties:
-                      unidades:
+                      residentes:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Unidad'
+                          $ref: '#/components/schemas/Residente'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -128,12 +127,12 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
-  /unidades/{id}:
+  /residentes/{id}:
     get:
       tags:
-        - Unidades
-      summary: Get unit by ID
-      description: Returns a single unit by ID (admin, condoAdmin, owner, and tenant can access)
+        - Residentes
+      summary: Get resident by ID
+      description: Returns a single resident by ID
       security:
         - bearerAuth: []
       parameters:
@@ -143,10 +142,10 @@ paths:
           schema:
             type: string
             format: uuid
-          description: Unit ID
+          description: Resident ID
       responses:
         '200':
-          description: Unit retrieved successfully
+          description: Resident retrieved successfully
           content:
             application/json:
               schema:
@@ -158,8 +157,8 @@ paths:
                   data:
                     type: object
                     properties:
-                      unidad:
-                        $ref: '#/components/schemas/Unidad'
+                      residente:
+                        $ref: '#/components/schemas/Residente'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -169,9 +168,9 @@ paths:
 
     put:
       tags:
-        - Unidades
-      summary: Update unit
-      description: Updates unit information (admin and condoAdmin only)
+        - Residentes
+      summary: Update resident
+      description: Updates resident information (admin and condoAdmin only)
       security:
         - bearerAuth: []
       parameters:
@@ -181,16 +180,16 @@ paths:
           schema:
             type: string
             format: uuid
-          description: Unit ID
+          description: Resident ID
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateUnidadRequest'
+              $ref: '#/components/schemas/UpdateResidenteRequest'
       responses:
         '200':
-          description: Unit updated successfully
+          description: Resident updated successfully
           content:
             application/json:
               schema:
@@ -201,12 +200,12 @@ paths:
                     example: success
                   message:
                     type: string
-                    example: Unidad actualizada exitosamente
+                    example: Residente actualizado exitosamente
                   data:
                     type: object
                     properties:
-                      unidad:
-                        $ref: '#/components/schemas/Unidad'
+                      residente:
+                        $ref: '#/components/schemas/Residente'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -218,9 +217,9 @@ paths:
 
     delete:
       tags:
-        - Unidades
-      summary: Delete unit
-      description: Permanently deletes a unit (admin only)
+        - Residentes
+      summary: Delete resident
+      description: Permanently deletes a resident (admin only)
       security:
         - bearerAuth: []
       parameters:
@@ -230,10 +229,10 @@ paths:
           schema:
             type: string
             format: uuid
-          description: Unit ID
+          description: Resident ID
       responses:
         '200':
-          description: Unit deleted successfully
+          description: Resident deleted successfully
           content:
             application/json:
               schema:
@@ -244,7 +243,7 @@ paths:
                     example: success
                   message:
                     type: string
-                    example: Unidad eliminada exitosamente
+                    example: Residente eliminado exitosamente
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -254,52 +253,54 @@ paths:
 
 components:
   schemas:
-    Unidad:
+    Residente:
       type: object
       properties:
         id:
           type: string
           format: uuid
           example: 123e4567-e89b-12d3-a456-426614174000
-        condominiumId:
+        unidadId:
           type: string
           format: uuid
           example: 987e6543-e21b-45d6-a789-987654321000
-        numero:
+        nombre:
           type: string
-          example: "A-101"
+          example: "Juan Pérez García"
+        email:
+          type: string
+          format: email
+          example: "juan.perez@email.com"
+        telefono:
+          type: string
+          example: "5512345678"
         tipo:
           type: string
-          enum: [Apartamento, Casa, Local Comercial, Estacionamiento]
-          example: Apartamento
-        area:
-          type: number
-          format: decimal
-          example: 85.5
-        propietario:
+          enum: [Propietario, Inquilino, Familiar]
+          example: Propietario
+        fechaIngreso:
           type: string
-          example: "Juan Pérez"
-        estado:
+          format: date-time
+          example: "2024-01-15T00:00:00.000Z"
+        documentoIdentidad:
           type: string
-          enum: [Ocupado, Vacío, Mantenimiento]
-          example: Vacío
-        habitaciones:
-          type: integer
-          example: 2
-        banos:
-          type: integer
-          example: 2
-        estacionamientos:
-          type: integer
-          example: 1
-        cuotaMantenimiento:
-          type: number
-          format: decimal
-          example: 1500.00
+          nullable: true
+          example: "ABC123456"
+        contactoEmergencia:
+          type: string
+          nullable: true
+          example: "María Pérez"
+        telefonoEmergencia:
+          type: string
+          nullable: true
+          example: "5587654321"
         notas:
           type: string
           nullable: true
-          example: "Unidad con vista al parque"
+          example: "Residente principal de la unidad"
+        activo:
+          type: boolean
+          example: true
         createdAt:
           type: string
           format: date-time
@@ -307,79 +308,74 @@ components:
           type: string
           format: date-time
 
-    CreateUnidadRequest:
+    CreateResidenteRequest:
       type: object
       required:
-        - condominiumId
-        - numero
-        - tipo
-        - area
-        - propietario
-        - cuotaMantenimiento
+        - unidadId
+        - nombre
+        - email
+        - telefono
+        - fechaIngreso
       properties:
-        condominiumId:
+        unidadId:
           type: string
           format: uuid
-        numero:
-          type: string
-          maxLength: 50
-        tipo:
-          type: string
-          enum: [Apartamento, Casa, Local Comercial, Estacionamiento]
-        area:
-          type: number
-          format: decimal
-        propietario:
+        nombre:
           type: string
           maxLength: 200
-        estado:
+        email:
           type: string
-          enum: [Ocupado, Vacío, Mantenimiento]
-          default: Vacío
-        habitaciones:
-          type: integer
-          minimum: 0
-        banos:
-          type: integer
-          minimum: 0
-        estacionamientos:
-          type: integer
-          minimum: 0
-        cuotaMantenimiento:
-          type: number
-          format: decimal
+          format: email
+        telefono:
+          type: string
+          maxLength: 20
+        tipo:
+          type: string
+          enum: [Propietario, Inquilino, Familiar]
+          default: Propietario
+        fechaIngreso:
+          type: string
+          format: date-time
+        documentoIdentidad:
+          type: string
+          maxLength: 50
+        contactoEmergencia:
+          type: string
+          maxLength: 200
+        telefonoEmergencia:
+          type: string
+          maxLength: 20
         notas:
           type: string
 
-    UpdateUnidadRequest:
+    UpdateResidenteRequest:
       type: object
       properties:
-        numero:
-          type: string
-          maxLength: 50
-        tipo:
-          type: string
-          enum: [Apartamento, Casa, Local Comercial, Estacionamiento]
-        area:
-          type: number
-          format: decimal
-        propietario:
+        nombre:
           type: string
           maxLength: 200
-        estado:
+        email:
           type: string
-          enum: [Ocupado, Vacío, Mantenimiento]
-        habitaciones:
-          type: integer
-          minimum: 0
-        banos:
-          type: integer
-          minimum: 0
-        estacionamientos:
-          type: integer
-          minimum: 0
-        cuotaMantenimiento:
-          type: number
-          format: decimal
+          format: email
+        telefono:
+          type: string
+          maxLength: 20
+        tipo:
+          type: string
+          enum: [Propietario, Inquilino, Familiar]
+        fechaIngreso:
+          type: string
+          format: date-time
+        documentoIdentidad:
+          type: string
+          maxLength: 50
+        contactoEmergencia:
+          type: string
+          maxLength: 200
+        telefonoEmergencia:
+          type: string
+          maxLength: 20
         notas:
           type: string
+        activo:
+          type: boolean

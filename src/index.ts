@@ -27,22 +27,7 @@ import asambleasRouter from './modules/asambleas/asambleas.routes';
 import reglamentosRouter from './modules/reglamentos/reglamentos.routes';
 import mantenimientoRouter from './modules/mantenimiento/mantenimiento.routes';
 import trabajadoresRouter from './modules/trabajadores/trabajadores.routes';
-
-/**
- * ✅ NUEVO (Drizzle)
- * En Drizzle no hay AppDataSource.initialize().
- * Hacemos un "select 1" para validar conexión.
- */
-
-// async function initializeDatabase(): Promise<void> {
-//   try {
-//     await AppDataSource.initialize(); // ✅ (ANTERIOR - TypeORM)
-//     logger.info('✅ Database connected successfully');
-//   } catch (error) {
-//     logger.error('❌ Database connection failed:', error);
-//     throw error;
-//   }
-// }
+import residentesRouter from './modules/residentes/residentes.routes';
 
 function initializeMiddlewares(app: Application): void {
   app.disable('x-powered-by');
@@ -96,10 +81,14 @@ function initializeRoutes(app: Application): void {
   });
 
   // Swagger documentation (sin rate limiter)
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Colmena API Documentation',
-  }));
+  app.use(
+    '/api-docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Colmena API Documentation',
+    })
+  );
 
   // Swagger JSON endpoint
   app.get('/api-docs.json', (req, res) => {
@@ -121,6 +110,7 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/reglamentos`, reglamentosRouter);
   app.use(`${apiPrefix}/mantenimiento`, mantenimientoRouter);
   app.use(`${apiPrefix}/trabajadores`, trabajadoresRouter);
+  app.use(`${apiPrefix}/residentes`, residentesRouter);
 
   app.use(notFoundHandler);
 }
@@ -160,7 +150,9 @@ async function startServer(): Promise<void> {
         `📚 API available at http://localhost:${config.port}${config.apiPrefix}`
       );
       logger.info(`🏥 Health check at http://localhost:${config.port}/health`);
-      logger.info(`📖 Swagger docs at http://localhost:${config.port}/api-docs`);
+      logger.info(
+        `📖 Swagger docs at http://localhost:${config.port}/api-docs`
+      );
     });
 
     server.on('error', (error) => {
@@ -173,7 +165,9 @@ async function startServer(): Promise<void> {
 
       // Log current pool stats before shutdown
       const poolStats = getPoolStats();
-      logger.info(`📊 Current pool stats - Total: ${poolStats.total}, Idle: ${poolStats.idle}, Waiting: ${poolStats.waiting}`);
+      logger.info(
+        `📊 Current pool stats - Total: ${poolStats.total}, Idle: ${poolStats.idle}, Waiting: ${poolStats.waiting}`
+      );
 
       server.close(async () => {
         try {
