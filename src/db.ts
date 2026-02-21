@@ -16,8 +16,12 @@ const poolConfig: PoolConfig = {
   // Connection string from environment
   connectionString: config.database.url,
 
-  // SSL configuration
-  ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+  // SSL configuration (required for Supabase)
+  ssl: config.database.url.includes('supabase.com')
+    ? { rejectUnauthorized: false }
+    : config.nodeEnv === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
 
   // Connection Pool Settings
   max: 20, // Maximum number of clients in the pool

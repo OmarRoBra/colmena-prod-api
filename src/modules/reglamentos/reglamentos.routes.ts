@@ -19,6 +19,30 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/reglamentos/condominio/:condominioId/active
+ * @desc    Get active regulation for a condominium
+ * @access  Private (all authenticated users)
+ */
+router.get(
+  '/condominio/:condominioId/active',
+  reglamentosDto.getReglamentosByCondominioValidation,
+  cache({ ttl: CacheTTL.LONG }),
+  reglamentosController.getActiveReglamento
+);
+
+/**
+ * @route   GET /api/v1/reglamentos/condominio/:condominioId/history
+ * @desc    Get regulation history (all versions) for a condominium
+ * @access  Private (all authenticated users)
+ */
+router.get(
+  '/condominio/:condominioId/history',
+  reglamentosDto.getReglamentosByCondominioValidation,
+  cache({ ttl: CacheTTL.LONG }),
+  reglamentosController.getReglamentosHistory
+);
+
+/**
  * @route   GET /api/v1/reglamentos/:id
  * @desc    Get reglamento by ID
  * @access  Private (all authenticated users - filtered in controller)
@@ -54,6 +78,19 @@ router.put(
   reglamentosDto.updateReglamentoValidation,
   invalidateCache(['*reglamentos*']),
   reglamentosController.updateReglamento
+);
+
+/**
+ * @route   PUT /api/v1/reglamentos/:id/archive
+ * @desc    Archive a regulation
+ * @access  Private (admin, condoAdmin)
+ */
+router.put(
+  '/:id/archive',
+  authorize('admin', 'condoAdmin'),
+  reglamentosDto.getReglamentoValidation,
+  invalidateCache(['*reglamentos*']),
+  reglamentosController.archiveReglamento
 );
 
 /**

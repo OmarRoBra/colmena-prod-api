@@ -94,3 +94,29 @@ export const getPagosByUnidadValidation = [
     .isUUID()
     .withMessage('ID de unidad inválido'),
 ];
+
+export const getPagosByCondominioValidation = [
+  param('condominioId')
+    .isUUID()
+    .withMessage('ID de condominio inválido'),
+];
+
+export const generateMaintenanceFeesValidation = [
+  body('condominioId')
+    .notEmpty()
+    .withMessage('El ID del condominio es requerido')
+    .isUUID()
+    .withMessage('ID de condominio inválido'),
+
+  body('mes')
+    .notEmpty()
+    .withMessage('El mes es requerido')
+    .isInt({ min: 1, max: 12 })
+    .withMessage('El mes debe ser un número entre 1 y 12'),
+
+  body('anio')
+    .notEmpty()
+    .withMessage('El año es requerido')
+    .isInt({ min: 2020, max: 2100 })
+    .withMessage('El año debe ser un número válido'),
+];

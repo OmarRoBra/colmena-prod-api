@@ -25,8 +25,15 @@ router.get(
  * @access  Private (admin, condoAdmin, owner, tenant)
  */
 router.get(
+  '/condominio/:condominioId',
+  authorize('admin', 'condoAdmin'),
+  pagosDto.getPagosByCondominioValidation,
+  pagosController.getPagosByCondominium
+);
+
+router.get(
   '/unidad/:unidadId',
-  authorize('admin', 'condoAdmin', 'owner', 'tenant'),
+  authorize('admin', 'condoAdmin', 'owner', 'tenant', 'resident'),
   pagosDto.getPagosByUnidadValidation,
   pagosController.getPagosByUnidad
 );
@@ -34,11 +41,11 @@ router.get(
 /**
  * @route   GET /api/v1/pagos/:id
  * @desc    Get pago by ID
- * @access  Private (admin, condoAdmin, owner, tenant)
+ * @access  Private (admin, condoAdmin, owner, tenant, resident)
  */
 router.get(
   '/:id',
-  authorize('admin', 'condoAdmin', 'owner', 'tenant'),
+  authorize('admin', 'condoAdmin', 'owner', 'tenant', 'resident'),
   pagosDto.getPagoValidation,
   pagosController.getPagoById
 );
@@ -52,6 +59,13 @@ router.post(
   '/',
   pagosDto.createPagoValidation,
   pagosController.createPago
+);
+
+router.post(
+  '/generate-maintenance',
+  authorize('admin', 'condoAdmin'),
+  pagosDto.generateMaintenanceFeesValidation,
+  pagosController.generateMaintenanceFees
 );
 
 /**

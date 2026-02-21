@@ -51,12 +51,17 @@ export const authenticate = async (
 
     const supabaseUser = data.user;
 
-    const usuario = supabaseUser;
+    // Fetch custom role from our usuarios table
+    const [dbUser] = await db
+      .select({ rol: usuarios.rol })
+      .from(usuarios)
+      .where(eq(usuarios.id, supabaseUser.id))
+      .limit(1);
 
     req.user = {
-      userId: usuario.id,
-      email: usuario.email || '', // Provide a default value
-      rol: usuario.role || '',
+      userId: supabaseUser.id,
+      email: supabaseUser.email || '',
+      rol: dbUser?.rol || supabaseUser.role || '',
     };
 
     next();
@@ -74,12 +79,12 @@ export const authorize = (...roles: string[]) => {
     if (!req.user) {
       return next(AppError.unauthorized('No autenticado'));
     }
-    /* 
-    if (!roles.includes(req.user.rol)) {
+
+    if (roles.length > 0 && !roles.includes(req.user.rol)) {
       return next(
         AppError.forbidden('No tienes permisos para realizar esta acci\u00f3n')
       );
-    } */
+    }
 
     next();
   };

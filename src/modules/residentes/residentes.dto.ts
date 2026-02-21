@@ -5,6 +5,7 @@ import { body, param } from 'express-validator';
 // ==========================================
 export interface ResidentDTO {
   id: string
+  condominioId: string
   unidadId: string
   nombre: string
   email: string
@@ -21,7 +22,8 @@ export interface ResidentDTO {
 }
 
 export interface CreateResidentDTO {
-  unidadId: string
+  condominioId: string
+  unidadId?: string
   nombre: string
   email: string
   telefono: string
@@ -54,9 +56,14 @@ export interface UpdateResidentDTO {
  * Validation rules for creating a resident
  */
 export const createResidentValidation = [
-  body('unidadId')
+  body('condominioId')
     .notEmpty()
-    .withMessage('El ID de la unidad es requerido')
+    .withMessage('El ID del condominio es requerido')
+    .isUUID()
+    .withMessage('ID de condominio inválido'),
+
+  body('unidadId')
+    .optional()
     .isUUID()
     .withMessage('ID de unidad inválido'),
 

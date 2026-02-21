@@ -41,7 +41,7 @@ router.get(
  */
 router.get(
   '/:id',
-  authorize('admin', 'condoAdmin', 'owner', 'tenant'),
+  authorize('admin', 'condoAdmin', 'owner', 'tenant', 'resident'),
   unidadesDto.getUnidadValidation,
   cache({ ttl: CacheTTL.MEDIUM }),
   unidadesController.getUnidadById

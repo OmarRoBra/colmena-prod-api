@@ -20,9 +20,19 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/reservaciones/condominio/:condominioId
+ * @desc    Get reservaciones by condominium
+ * @access  Private (authenticated users)
+ */
+router.get(
+  '/condominio/:condominioId',
+  reservacionesController.getByCondominio
+);
+
+/**
  * @route   GET /api/v1/reservaciones/:id
  * @desc    Get reservacion by ID
- * @access  Private (all authenticated users - filtered in controller)
+ * @access  Private (all authenticated users)
  */
 router.get(
   '/:id',
@@ -33,7 +43,7 @@ router.get(
 /**
  * @route   POST /api/v1/reservaciones
  * @desc    Create a new reservacion
- * @access  Private (all authenticated users - filtered in controller)
+ * @access  Private (all authenticated users)
  */
 router.post(
   '/',
@@ -51,6 +61,30 @@ router.put(
   authorize('admin', 'condoAdmin'),
   reservacionesDto.updateReservacionValidation,
   reservacionesController.updateReservacion
+);
+
+/**
+ * @route   PUT /api/v1/reservaciones/:id/aprobar
+ * @desc    Approve reservacion
+ * @access  Private (admin, condoAdmin)
+ */
+router.put(
+  '/:id/aprobar',
+  authorize('admin', 'condoAdmin'),
+  reservacionesDto.aprobarReservacionValidation,
+  reservacionesController.aprobarReservacion
+);
+
+/**
+ * @route   PUT /api/v1/reservaciones/:id/rechazar
+ * @desc    Reject reservacion
+ * @access  Private (admin, condoAdmin)
+ */
+router.put(
+  '/:id/rechazar',
+  authorize('admin', 'condoAdmin'),
+  reservacionesDto.rechazarReservacionValidation,
+  reservacionesController.rechazarReservacion
 );
 
 /**

@@ -14,6 +14,13 @@ router.use(authenticate);
 router.get('/', authorize('admin', 'condoAdmin'), asambleasController.getAllAsambleas);
 
 /**
+ * @route   GET /api/v1/asambleas/condominio/:condominioId
+ * @desc    Get asambleas by condominium
+ * @access  Private (all authenticated users)
+ */
+router.get('/condominio/:condominioId', asambleasController.getAsambleasByCondominio);
+
+/**
  * @route   GET /api/v1/asambleas/:id
  * @desc    Get asamblea by ID
  * @access  Private (all authenticated users - filtered in controller)

@@ -9,6 +9,13 @@ const router = Router();
 router.use(authenticate);
 
 /**
+ * @route   GET /api/v1/residentes/me
+ * @desc    Get current user's resident profile
+ * @access  Private (resident)
+ */
+router.get('/me', authorize('resident', 'admin', 'condoAdmin'), residentesController.getMyResidente);
+
+/**
  * @route   GET /api/v1/residentes
  * @desc    Get all residents
  * @access  Private (admin, condoAdmin)
@@ -17,6 +24,17 @@ router.get(
   '/',
   authorize('admin', 'condoAdmin'),
   residentesController.getAllResidents
+);
+
+/**
+ * @route   GET /api/v1/residentes/condominio/:condominioId
+ * @desc    Get residents by condominium ID
+ * @access  Private (admin, condoAdmin)
+ */
+router.get(
+  '/condominio/:condominioId',
+  authorize('admin', 'condoAdmin'),
+  residentesController.getResidentsByCondominio
 );
 
 /**
@@ -58,11 +76,11 @@ router.post(
 /**
  * @route   PUT /api/v1/residentes/:id
  * @desc    Update resident
- * @access  Private (admin, condoAdmin)
+ * @access  Private (admin, condoAdmin, resident — own profile only)
  */
 router.put(
   '/:id',
-  authorize('admin', 'condoAdmin'),
+  authorize('admin', 'condoAdmin', 'resident'),
   residentesDto.updateResidentValidation,
   residentesController.updateResident
 );

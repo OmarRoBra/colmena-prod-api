@@ -24,10 +24,20 @@ import usuariosRouter from './modules/usuarios/usuarios.routes';
 import pagosRouter from './modules/pagos/pagos.routes';
 import reservacionesRouter from './modules/reservaciones/reservaciones.routes';
 import asambleasRouter from './modules/asambleas/asambleas.routes';
+import comitesRouter from './modules/comites/comites.routes';
 import reglamentosRouter from './modules/reglamentos/reglamentos.routes';
 import mantenimientoRouter from './modules/mantenimiento/mantenimiento.routes';
 import trabajadoresRouter from './modules/trabajadores/trabajadores.routes';
 import residentesRouter from './modules/residentes/residentes.routes';
+import areasComunesRouter from './modules/areas-comunes/areas-comunes.routes';
+import gastosRouter from './modules/gastos/gastos.routes';
+import proveedoresRouter from './modules/proveedores/proveedores.routes';
+import contratosRouter from './modules/contratos/contratos.routes';
+import mensajesRouter from './modules/mensajes/mensajes.routes';
+import documentosRouter from './modules/documentos/documentos.routes';
+import encuestasRouter from './modules/encuestas/encuestas.routes';
+import familiaresRouter from './modules/familiares/familiares.routes';
+import visitasRouter from './modules/visitas/visitas.routes';
 
 function initializeMiddlewares(app: Application): void {
   app.disable('x-powered-by');
@@ -107,10 +117,20 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/pagos`, pagosRouter);
   app.use(`${apiPrefix}/reservaciones`, reservacionesRouter);
   app.use(`${apiPrefix}/asambleas`, asambleasRouter);
+  app.use(`${apiPrefix}/comites`, comitesRouter);
   app.use(`${apiPrefix}/reglamentos`, reglamentosRouter);
   app.use(`${apiPrefix}/mantenimiento`, mantenimientoRouter);
   app.use(`${apiPrefix}/trabajadores`, trabajadoresRouter);
   app.use(`${apiPrefix}/residentes`, residentesRouter);
+  app.use(`${apiPrefix}/areas-comunes`, areasComunesRouter);
+  app.use(`${apiPrefix}/gastos`, gastosRouter);
+  app.use(`${apiPrefix}/proveedores`, proveedoresRouter);
+  app.use(`${apiPrefix}/contratos`, contratosRouter);
+  app.use(`${apiPrefix}/mensajes`, mensajesRouter);
+  app.use(`${apiPrefix}/documentos`, documentosRouter);
+  app.use(`${apiPrefix}/encuestas`, encuestasRouter);
+  app.use(`${apiPrefix}/familiares`, familiaresRouter);
+  app.use(`${apiPrefix}/visitas`, visitasRouter);
 
   app.use(notFoundHandler);
 }

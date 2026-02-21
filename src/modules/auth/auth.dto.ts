@@ -26,6 +26,6 @@ export const registerValidation = [
 
   body('rol')
     .optional()
-    .isIn(['admin', 'condoAdmin', 'owner', 'tenant', 'worker', 'serviceProvider'])
-    .withMessage('El rol debe ser admin, condoAdmin, owner, tenant, worker o serviceProvider'),
+    .isIn(['admin', 'condoAdmin', 'owner', 'tenant', 'worker', 'serviceProvider', 'resident', 'securityWorker'])
+    .withMessage('El rol debe ser admin, condoAdmin, owner, tenant, worker, serviceProvider, resident o securityWorker'),
 ];

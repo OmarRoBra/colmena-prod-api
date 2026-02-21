@@ -11,15 +11,18 @@ export const createReservacionValidation = [
     .withMessage('ID de condominio inválido'),
 
   body('unidadId')
-    .notEmpty()
-    .withMessage('El ID de la unidad es requerido')
+    .optional({ values: 'null' })
     .isUUID()
     .withMessage('ID de unidad inválido'),
 
+  body('areaComunId')
+    .optional({ values: 'null' })
+    .isUUID()
+    .withMessage('ID de área común inválido'),
+
   body('area')
+    .optional()
     .trim()
-    .notEmpty()
-    .withMessage('El área es requerida')
     .isLength({ max: 100 })
     .withMessage('El área no debe exceder 100 caracteres'),
 
@@ -40,8 +43,17 @@ export const createReservacionValidation = [
     .isDecimal()
     .withMessage('El costo debe ser un número decimal'),
 
-  body('notas')
+  body('numPersonas')
     .optional()
+    .isInt({ min: 1 })
+    .withMessage('El número de personas debe ser al menos 1'),
+
+  body('motivo')
+    .optional({ values: 'null' })
+    .trim(),
+
+  body('notas')
+    .optional({ values: 'null' })
     .trim(),
 ];
 
@@ -58,9 +70,49 @@ export const updateReservacionValidation = [
     .isIn(['pendiente', 'confirmado', 'cancelado'])
     .withMessage('El estado debe ser pendiente, confirmado o cancelado'),
 
-  body('notas')
+  body('areaComunId')
+    .optional({ values: 'null' })
+    .isUUID()
+    .withMessage('ID de área común inválido'),
+
+  body('area')
     .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('El área no debe exceder 100 caracteres'),
+
+  body('fechaInicio')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha de inicio inválida'),
+
+  body('fechaFin')
+    .optional()
+    .isISO8601()
+    .withMessage('Fecha de fin inválida'),
+
+  body('costo')
+    .optional()
+    .isDecimal()
+    .withMessage('El costo debe ser un número decimal'),
+
+  body('numPersonas')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('El número de personas debe ser al menos 1'),
+
+  body('motivo')
+    .optional({ values: 'null' })
     .trim(),
+
+  body('notas')
+    .optional({ values: 'null' })
+    .trim(),
+
+  body('pagado')
+    .optional()
+    .isBoolean()
+    .withMessage('El campo pagado debe ser verdadero o falso'),
 ];
 
 /**
@@ -70,4 +122,27 @@ export const getReservacionValidation = [
   param('id')
     .isUUID()
     .withMessage('ID de reservación inválido'),
+];
+
+/**
+ * Validation rules for approving a reservacion
+ */
+export const aprobarReservacionValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de reservación inválido'),
+];
+
+/**
+ * Validation rules for rejecting a reservacion
+ */
+export const rechazarReservacionValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de reservación inválido'),
+
+  body('motivoRechazo')
+    .notEmpty()
+    .withMessage('El motivo de rechazo es requerido')
+    .trim(),
 ];

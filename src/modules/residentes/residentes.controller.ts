@@ -2,9 +2,39 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db';
-import { residentes, unidades } from '../../db/schema';
+import { residentes, unidades, condominios, usuarios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { supabaseAdmin } from '../../config/supabase';
+
+/**
+ * Get the resident record for the currently authenticated user (by usuarioId)
+ */
+export const getMyResidente = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return next(AppError.unauthorized('No autenticado'));
+
+    const [residente] = await db
+      .select()
+      .from(residentes)
+      .where(eq(residentes.usuarioId, userId))
+      .limit(1);
+
+    if (!residente) {
+      return next(AppError.notFound('No se encontró un perfil de residente para este usuario'));
+    }
+
+    res.status(200).json({ status: 'success', data: { residente } });
+  } catch (error) {
+    logger.error('Error in getMyResidente:', error);
+    next(error);
+  }
+};
 
 /**
  * Get all residents
@@ -24,6 +54,33 @@ export const getAllResidents = async (
     });
   } catch (error) {
     logger.error('Error in getAllResidents:', error);
+    next(error);
+  }
+};
+
+/**
+ * Get residents by condominium ID (through unidades)
+ */
+export const getResidentsByCondominio = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { condominioId } = req.params;
+
+    const result = await db
+      .select()
+      .from(residentes)
+      .where(eq(residentes.condominioId, condominioId));
+
+    res.status(200).json({
+      status: 'success',
+      results: result.length,
+      data: { residentes: result },
+    });
+  } catch (error) {
+    logger.error('Error in getResidentsByCondominio:', error);
     next(error);
   }
 };
@@ -128,6 +185,7 @@ export const createResident = async (
     }
 
     const {
+      condominioId,
       unidadId,
       nombre,
       email,
@@ -140,24 +198,37 @@ export const createResident = async (
       notas,
     } = req.body;
 
-    // Verify unit exists
-    const [unit] = await db
+    // Verify condominio exists
+    const [condominio] = await db
       .select()
-      .from(unidades)
-      .where(eq(unidades.id, unidadId))
+      .from(condominios)
+      .where(eq(condominios.id, condominioId))
       .limit(1);
 
-    if (!unit) {
-      return next(AppError.notFound('Unidad no encontrada'));
+    if (!condominio) {
+      return next(AppError.notFound('Condominio no encontrado'));
     }
 
-    // Check if email already exists for this unit
+    // Verify unit exists if provided
+    if (unidadId) {
+      const [unit] = await db
+        .select()
+        .from(unidades)
+        .where(eq(unidades.id, unidadId))
+        .limit(1);
+
+      if (!unit) {
+        return next(AppError.notFound('Unidad no encontrada'));
+      }
+    }
+
+    // Check if email already exists in this condominium
     const [existingResident] = await db
       .select()
       .from(residentes)
       .where(
         and(
-          eq(residentes.unidadId, unidadId),
+          eq(residentes.condominioId, condominioId),
           eq(residentes.email, email.toLowerCase())
         )
       )
@@ -166,7 +237,7 @@ export const createResident = async (
     if (existingResident) {
       return next(
         AppError.conflict(
-          'Ya existe un residente con este email en la unidad'
+          'Ya existe un residente con este email en el condominio'
         )
       );
     }
@@ -175,7 +246,8 @@ export const createResident = async (
     const [newResident] = await db
       .insert(residentes)
       .values({
-        unidadId,
+        condominioId,
+        ...(unidadId && { unidadId }),
         nombre,
         email: email.toLowerCase(),
         telefono,
@@ -189,12 +261,41 @@ export const createResident = async (
       .returning();
 
     logger.info(
-      `Resident created: ${newResident.nombre} in unit ${unidadId}`
+      `Resident created: ${newResident.nombre} in condominio ${condominioId}`
     );
+
+    // Create Supabase credentials and link usuario profile
+    let credencialesEnviadas = false;
+    try {
+      const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        newResident.email,
+        { data: { rol: 'resident' } }
+      );
+      if (!inviteErr && inviteData?.user) {
+        const nameParts = newResident.nombre.trim().split(' ');
+        await db.insert(usuarios).values({
+          id: inviteData.user.id,
+          nombre: nameParts[0],
+          apellido: nameParts.slice(1).join(' ') || '-',
+          email: newResident.email,
+          rol: 'resident',
+        }).onConflictDoNothing();
+        await db.update(residentes)
+          .set({ usuarioId: inviteData.user.id })
+          .where(eq(residentes.id, newResident.id));
+        credencialesEnviadas = true;
+        logger.info(`Credentials invited for resident: ${newResident.email}`);
+      } else if (inviteErr) {
+        logger.warn(`Could not invite resident ${newResident.email}: ${inviteErr.message}`);
+      }
+    } catch (credErr) {
+      logger.warn(`Credential creation failed for resident ${newResident.email}:`, credErr);
+    }
 
     res.status(201).json({
       status: 'success',
       message: 'Residente creado exitosamente',
+      credencialesEnviadas,
       data: { residente: newResident },
     });
   } catch (error) {
@@ -244,14 +345,19 @@ export const updateResident = async (
       return next(AppError.notFound('Residente no encontrado'));
     }
 
-    // If email is being updated, check for duplicates in the same unit
+    // Residents can only update their own profile
+    if (req.user?.rol === 'resident' && existingResident.usuarioId !== req.user.userId) {
+      return next(AppError.forbidden('No tienes permiso para modificar este perfil'));
+    }
+
+    // If email is being updated, check for duplicates in the same condominium
     if (email && email.toLowerCase() !== existingResident.email) {
       const [duplicateResident] = await db
         .select()
         .from(residentes)
         .where(
           and(
-            eq(residentes.unidadId, existingResident.unidadId),
+            eq(residentes.condominioId, existingResident.condominioId),
             eq(residentes.email, email.toLowerCase())
           )
         )

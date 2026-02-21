@@ -16,6 +16,17 @@ export const getAllAsambleas = async (req: Request, res: Response, next: NextFun
   }
 };
 
+export const getAsambleasByCondominio = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { condominioId } = req.params;
+    const result = await db.select().from(asambleas).where(eq(asambleas.condominioId, condominioId));
+    res.status(200).json({ status: 'success', results: result.length, data: { asambleas: result } });
+  } catch (error) {
+    logger.error('Error in getAsambleasByCondominio:', error);
+    next(error);
+  }
+};
+
 export const getAsambleaById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);

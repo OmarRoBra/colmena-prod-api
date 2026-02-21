@@ -2,9 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
-import { trabajadores, condominios } from '../../db/schema';
+import { trabajadores, condominios, usuarios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { supabaseAdmin } from '../../config/supabase';
 
 export const getAllTrabajadores = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -44,7 +45,38 @@ export const createTrabajador = async (req: Request, res: Response, next: NextFu
     }).returning();
 
     logger.info(`Trabajador created: ${newTrabajador.id}`);
-    res.status(201).json({ status: 'success', message: 'Trabajador creado', data: { trabajador: newTrabajador } });
+
+    // Create Supabase credentials if email provided
+    let credencialesEnviadas = false;
+    if (email) {
+      try {
+        const rol = puesto?.toLowerCase() === 'seguridad' ? 'securityWorker' : 'worker';
+        const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+          email.toLowerCase(),
+          { data: { rol } }
+        );
+        if (!inviteErr && inviteData?.user) {
+          await db.insert(usuarios).values({
+            id: inviteData.user.id,
+            nombre,
+            apellido,
+            email: email.toLowerCase(),
+            rol,
+          }).onConflictDoNothing();
+          await db.update(trabajadores)
+            .set({ usuarioId: inviteData.user.id })
+            .where(eq(trabajadores.id, newTrabajador.id));
+          credencialesEnviadas = true;
+          logger.info(`Credentials invited for trabajador: ${email}`);
+        } else if (inviteErr) {
+          logger.warn(`Could not invite trabajador ${email}: ${inviteErr.message}`);
+        }
+      } catch (credErr) {
+        logger.warn(`Credential creation failed for trabajador ${email}:`, credErr);
+      }
+    }
+
+    res.status(201).json({ status: 'success', message: 'Trabajador creado', credencialesEnviadas, data: { trabajador: newTrabajador } });
   } catch (error) {
     logger.error('Error in createTrabajador:', error);
     next(error);
