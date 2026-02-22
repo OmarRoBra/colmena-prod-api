@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import 'express-async-errors';
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -139,12 +139,40 @@ function initializeErrorHandling(app: Application): void {
   app.use(errorHandler);
 }
 
+// ─── Lazy initialization (serverless-safe) ────────────────────────────────────
+let _initialized = false;
+let _initPromise: Promise<void> | null = null;
+
+async function ensureInitialized(): Promise<void> {
+  if (_initialized) return;
+  if (!_initPromise) {
+    _initPromise = (async () => {
+      await initializeDatabase();
+      await cacheService.initialize();
+      _initialized = true;
+    })();
+  }
+  return _initPromise;
+}
+
 /**
  * Crea la instancia de Express totalmente configurada (middlewares + rutas + errores)
  * No arranca el servidor ni toca la base de datos.
  */
 export function createApp(): Application {
   const app = express();
+
+  // Ensure DB + cache are ready before any request (works in serverless too)
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureInitialized();
+      next();
+    } catch (err) {
+      logger.error('Initialization error:', err);
+      res.status(503).json({ error: 'Service temporarily unavailable' });
+    }
+  });
+
   initializeMiddlewares(app);
   initializeRoutes(app);
   initializeErrorHandling(app);
@@ -156,11 +184,7 @@ export function createApp(): Application {
  */
 async function startServer(): Promise<void> {
   try {
-    // ✅ NUEVO (Drizzle)
-    await initializeDatabase();
-
-    // Initialize Redis cache
-    await cacheService.initialize();
+    await ensureInitialized();
 
     const app = createApp();
 
@@ -216,7 +240,13 @@ async function startServer(): Promise<void> {
   }
 }
 
-startServer().catch((err) => {
-  logger.error('❌ Fatal error on startup:', err);
-  process.exit(1);
-});
+// Export the Express app for Vercel serverless (and other module consumers)
+export default createApp();
+
+// Start the HTTP server only when running directly (not on Vercel)
+if (!process.env.VERCEL) {
+  startServer().catch((err) => {
+    logger.error('❌ Fatal error on startup:', err);
+    process.exit(1);
+  });
+}

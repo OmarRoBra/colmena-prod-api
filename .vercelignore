@@ -1,0 +1,8 @@
+src/
+logs/
+uploads/
+coverage/
+*.log
+.env
+drizzle/
+scripts/
