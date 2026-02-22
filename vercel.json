@@ -11,22 +11,7 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/health",
-      "dest": "dist/index.js"
-    },
-    {
-      "src": "/api-docs(.*)",
-      "dest": "dist/index.js"
-    },
-    {
-      "src": "/api/v1/(.*)",
-      "dest": "dist/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "dist/index.js"
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/dist/index.js" }
   ]
 }
