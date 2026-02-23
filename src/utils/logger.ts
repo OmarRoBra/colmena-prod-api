@@ -47,48 +47,60 @@ const fileFormat = winston.format.combine(
   winston.format.json()
 );
 
+const isServerless = !!process.env.VERCEL;
+
 // Define transports
-const transports = [
+const transports: winston.transport[] = [
   // Console transport
   new winston.transports.Console({
     format: consoleFormat,
   }),
+];
 
+if (!isServerless) {
   // Error log file
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-    format: fileFormat,
-    maxsize: 5242880, // 5MB
-    maxFiles: 5,
-  }),
+  transports.push(
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      format: fileFormat,
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    })
+  );
 
   // Combined log file
-  new winston.transports.File({
-    filename: 'logs/combined.log',
-    format: fileFormat,
-    maxsize: 5242880, // 5MB
-    maxFiles: 5,
-  }),
-];
+  transports.push(
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      format: fileFormat,
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    })
+  );
+}
 
 // Create the logger
 const logger = winston.createLogger({
   level: level(),
   levels,
   transports,
-  exceptionHandlers: [
-    new winston.transports.File({
-      filename: 'logs/exceptions.log',
-      format: fileFormat,
-    }),
-  ],
-  rejectionHandlers: [
-    new winston.transports.File({
-      filename: 'logs/rejections.log',
-      format: fileFormat,
-    }),
-  ],
+  ...(isServerless
+    ? {}
+    : {
+        exceptionHandlers: [
+          new winston.transports.File({
+            filename: 'logs/exceptions.log',
+            format: fileFormat,
+          }),
+        ],
+        rejectionHandlers: [
+          new winston.transports.File({
+            filename: 'logs/rejections.log',
+            format: fileFormat,
+          }),
+        ],
+      }),
   exitOnError: false,
 });
 
