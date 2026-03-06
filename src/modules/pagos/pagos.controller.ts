@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { pagos, unidades, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { logAudit } from '../../utils/audit';
 
 /**
  * Get all pagos
@@ -153,7 +154,7 @@ export const createPago = async (
       return next(AppError.notFound('Unidad no encontrada'));
     }
 
-    // Create pago
+    // Create pago — default metodoPago to 'pendiente' when not yet known
     const [newPago] = await db
       .insert(pagos)
       .values({
@@ -161,7 +162,7 @@ export const createPago = async (
         usuarioId: userId,
         monto,
         concepto,
-        metodoPago,
+        metodoPago: metodoPago || 'pendiente',
         referencia,
         comprobante,
         notas,
@@ -170,6 +171,16 @@ export const createPago = async (
       .returning();
 
     logger.info(`Pago created: ${newPago.id} for unidad ${unidadId}`);
+
+    await logAudit({
+      usuarioId: userId,
+      condominioId: unidad.condominiumId,
+      accion: 'create',
+      entidad: 'pago',
+      entidadId: newPago.id,
+      detalles: { monto: newPago.monto, concepto: newPago.concepto, unidadId },
+      ipAddress: req.ip,
+    });
 
     res.status(201).json({
       status: 'success',
@@ -227,6 +238,15 @@ export const updatePago = async (
       .returning();
 
     logger.info(`Pago updated: ${updatedPago.id}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      accion: 'update',
+      entidad: 'pago',
+      entidadId: updatedPago.id,
+      detalles: { estado: updatedPago.estado },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: 'success',

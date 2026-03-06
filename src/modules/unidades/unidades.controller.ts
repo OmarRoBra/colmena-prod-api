@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { unidades, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { logAudit } from '../../utils/audit';
 
 /**
  * Get all unidades
@@ -194,6 +195,16 @@ export const createUnidad = async (
       `Unidad created: ${newUnidad.numero} in condominio ${condominiumId}`
     );
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: condominiumId,
+      accion: 'create',
+      entidad: 'unidad',
+      entidadId: newUnidad.id,
+      detalles: { numero: newUnidad.numero, tipo: newUnidad.tipo },
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({
       status: 'success',
       message: 'Unidad creada exitosamente',
@@ -289,6 +300,16 @@ export const updateUnidad = async (
 
     logger.info(`Unidad updated: ${updatedUnidad.id}`);
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: updatedUnidad.condominiumId,
+      accion: 'update',
+      entidad: 'unidad',
+      entidadId: updatedUnidad.id,
+      detalles: { numero: updatedUnidad.numero, estado: updatedUnidad.estado },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Unidad actualizada exitosamente',
@@ -335,6 +356,16 @@ export const deleteUnidad = async (
       .where(eq(unidades.id, id));
 
     logger.info(`Unidad deleted: ${id}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: existingUnidad.condominiumId,
+      accion: 'delete',
+      entidad: 'unidad',
+      entidadId: id,
+      detalles: { numero: existingUnidad.numero },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: 'success',

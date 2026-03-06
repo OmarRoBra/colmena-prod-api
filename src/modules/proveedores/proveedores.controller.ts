@@ -16,6 +16,17 @@ export const getAllProveedores = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const getProveedoresByCondominio = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { condominioId } = req.params;
+    const result = await db.select().from(proveedores).where(eq(proveedores.condominioId, condominioId));
+    res.status(200).json({ status: 'success', results: result.length, data: { proveedores: result } });
+  } catch (error) {
+    logger.error('Error in getProveedoresByCondominio:', error);
+    next(error);
+  }
+};
+
 export const getProveedorById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);

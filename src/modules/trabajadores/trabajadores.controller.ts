@@ -17,6 +17,30 @@ export const getAllTrabajadores = async (req: Request, res: Response, next: Next
   }
 };
 
+export const getMyTrabajador = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return next(AppError.unauthorized('No autenticado'));
+    const [trabajador] = await db.select().from(trabajadores).where(eq(trabajadores.usuarioId, userId)).limit(1);
+    if (!trabajador) return next(AppError.notFound('Trabajador no encontrado'));
+    res.status(200).json({ status: 'success', data: { trabajador } });
+  } catch (error) {
+    logger.error('Error in getMyTrabajador:', error);
+    next(error);
+  }
+};
+
+export const getTrabajadoresByCondominio = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { condominioId } = req.params;
+    const result = await db.select().from(trabajadores).where(eq(trabajadores.condominioId, condominioId));
+    res.status(200).json({ status: 'success', results: result.length, data: { trabajadores: result } });
+  } catch (error) {
+    logger.error('Error in getTrabajadoresByCondominio:', error);
+    next(error);
+  }
+};
+
 export const getTrabajadorById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);

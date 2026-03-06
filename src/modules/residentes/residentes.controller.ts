@@ -6,6 +6,7 @@ import { residentes, unidades, condominios, usuarios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
 import { supabaseAdmin } from '../../config/supabase';
+import { logAudit } from '../../utils/audit';
 
 /**
  * Get the resident record for the currently authenticated user (by usuarioId)
@@ -264,6 +265,16 @@ export const createResident = async (
       `Resident created: ${newResident.nombre} in condominio ${condominioId}`
     );
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId,
+      accion: 'create',
+      entidad: 'residente',
+      entidadId: newResident.id,
+      detalles: { nombre: newResident.nombre, email: newResident.email, tipo: newResident.tipo },
+      ipAddress: req.ip,
+    });
+
     // Create Supabase credentials and link usuario profile
     let credencialesEnviadas = false;
     try {
@@ -393,6 +404,16 @@ export const updateResident = async (
 
     logger.info(`Resident updated: ${updatedResident.id}`);
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: updatedResident.condominioId,
+      accion: 'update',
+      entidad: 'residente',
+      entidadId: updatedResident.id,
+      detalles: { nombre: updatedResident.nombre, activo: updatedResident.activo },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Residente actualizado exitosamente',
@@ -439,6 +460,16 @@ export const deleteResident = async (
       .where(eq(residentes.id, id));
 
     logger.info(`Resident deleted: ${id}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: existingResident.condominioId,
+      accion: 'delete',
+      entidad: 'residente',
+      entidadId: id,
+      detalles: { nombre: existingResident.nombre, email: existingResident.email },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: 'success',

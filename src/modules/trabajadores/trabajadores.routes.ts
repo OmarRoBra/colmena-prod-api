@@ -14,6 +14,20 @@ router.use(authenticate);
 router.get('/', authorize('admin', 'condoAdmin'), trabajadoresController.getAllTrabajadores);
 
 /**
+ * @route   GET /api/v1/trabajadores/me
+ * @desc    Get current authenticated user's worker record
+ * @access  Private (worker, securityWorker)
+ */
+router.get('/me', trabajadoresController.getMyTrabajador);
+
+/**
+ * @route   GET /api/v1/trabajadores/condominio/:condominioId
+ * @desc    Get all trabajadores for a condominium
+ * @access  Private (admin, condoAdmin)
+ */
+router.get('/condominio/:condominioId', authorize('admin', 'condoAdmin'), trabajadoresController.getTrabajadoresByCondominio);
+
+/**
  * @route   GET /api/v1/trabajadores/:id
  * @desc    Get trabajador by ID
  * @access  Private (all authenticated users - filtered in controller)

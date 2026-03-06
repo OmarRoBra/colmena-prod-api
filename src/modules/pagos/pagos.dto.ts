@@ -24,10 +24,9 @@ export const createPagoValidation = [
     .withMessage('El concepto no debe exceder 200 caracteres'),
 
   body('metodoPago')
+    .optional({ nullable: true })
     .trim()
-    .notEmpty()
-    .withMessage('El método de pago es requerido')
-    .isIn(['efectivo', 'transferencia', 'tarjeta'])
+    .isIn(['efectivo', 'transferencia', 'tarjeta', 'pendiente', ''])
     .withMessage('El método de pago debe ser efectivo, transferencia o tarjeta'),
 
   body('referencia')

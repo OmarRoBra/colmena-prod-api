@@ -479,6 +479,81 @@ export const visitas = pgTable('visitas', {
 });
 
 // ==========================================
+// CARGADORES EV (Electric Vehicle Chargers)
+// ==========================================
+export const cargadores = pgTable('cargadores', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  nombre: varchar('nombre', { length: 100 }).notNull(),
+  ubicacion: varchar('ubicacion', { length: 200 }),
+  potenciaKw: decimal('potencia_kw', { precision: 5, scale: 2 }).notNull(),
+  tipoConector: varchar('tipo_conector', { length: 50 }).notNull().default('Type2'), // Type2, CCS, CHAdeMO
+  precioPorKwh: decimal('precio_por_kwh', { precision: 8, scale: 4 }).notNull(),
+  estado: varchar('estado', { length: 50 }).notNull().default('disponible'), // disponible, en_uso, mantenimiento, fuera_servicio
+  activo: boolean('activo').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
+// SESIONES DE CARGA (Charging Sessions)
+// ==========================================
+export const sesionesCarga = pgTable('sesiones_carga', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  cargadorId: uuid('cargador_id')
+    .notNull()
+    .references(() => cargadores.id, { onDelete: 'cascade' }),
+  residenteId: uuid('residente_id').references(() => residentes.id, { onDelete: 'set null' }),
+  unidadId: uuid('unidad_id').references(() => unidades.id, { onDelete: 'set null' }),
+  modoCarga: varchar('modo_carga', { length: 20 }).notNull().default('kwh'), // kwh, porcentaje, tiempo
+  cantidadSolicitada: decimal('cantidad_solicitada', { precision: 8, scale: 2 }).notNull(),
+  energiaEntregada: decimal('energia_entregada', { precision: 8, scale: 2 }).default('0'),
+  costoEstimado: decimal('costo_estimado', { precision: 10, scale: 2 }),
+  costoFinal: decimal('costo_final', { precision: 10, scale: 2 }),
+  estado: varchar('estado', { length: 50 }).notNull().default('activa'), // activa, completada, cancelada, fallida
+  inicioDt: timestamp('inicio_dt').notNull().defaultNow(),
+  finDt: timestamp('fin_dt'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
+// NOTIFICACIONES (In-App Notifications)
+// ==========================================
+export const notificaciones = pgTable('notificaciones', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id').references(() => condominios.id, { onDelete: 'cascade' }),
+  usuarioId: uuid('usuario_id').references(() => usuarios.id, { onDelete: 'cascade' }),
+  titulo: varchar('titulo', { length: 200 }).notNull(),
+  mensaje: text('mensaje').notNull(),
+  tipo: varchar('tipo', { length: 50 }).notNull().default('info'), // info, pago, mantenimiento, reservacion, aviso
+  leida: boolean('leida').notNull().default(false),
+  leidaAt: timestamp('leida_at'),
+  accionUrl: varchar('accion_url', { length: 300 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ==========================================
+// AUDIT LOGS (Activity / Audit Trail)
+// ==========================================
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id'),
+  usuarioId: uuid('usuario_id'),
+  accion: varchar('accion', { length: 100 }).notNull(), // create, update, delete
+  entidad: varchar('entidad', { length: 100 }).notNull(), // pago, residente, unidad, mantenimiento, etc.
+  entidadId: uuid('entidad_id'),
+  detalles: json('detalles'), // { descripcion, cambios }
+  ipAddress: varchar('ip_address', { length: 50 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ==========================================
 // RELACIONES (Relations)
 // ==========================================
 export const usuariosRelations = relations(usuarios, ({ many }) => ({
@@ -509,6 +584,9 @@ export const condominiosRelations = relations(condominios, ({ one, many }) => ({
   encuestas: many(encuestas),
   familiares: many(familiares),
   visitas: many(visitas),
+  cargadores: many(cargadores),
+  sesionesCarga: many(sesionesCarga),
+  notificaciones: many(notificaciones),
 }));
 
 export const areasComunesRelations = relations(areasComunes, ({ one, many }) => ({

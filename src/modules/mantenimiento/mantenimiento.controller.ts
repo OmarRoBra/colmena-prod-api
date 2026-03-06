@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { mantenimiento, condominios, usuarios, residentes } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { logAudit } from '../../utils/audit';
 
 export const getAllMantenimiento = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -64,6 +65,17 @@ export const createMantenimiento = async (req: Request, res: Response, next: Nex
     }).returning();
 
     logger.info(`Mantenimiento created: ${newMant.id}`);
+
+    await logAudit({
+      usuarioId: userId,
+      condominioId,
+      accion: 'create',
+      entidad: 'mantenimiento',
+      entidadId: newMant.id,
+      detalles: { titulo: newMant.titulo, tipo: newMant.tipo, prioridad: newMant.prioridad },
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({ status: 'success', message: 'Solicitud creada', data: { mantenimiento: newMant } });
   } catch (error) {
     logger.error('Error in createMantenimiento:', error);
@@ -89,6 +101,17 @@ export const updateMantenimiento = async (req: Request, res: Response, next: Nex
     }).where(eq(mantenimiento.id, req.params.id)).returning();
 
     logger.info(`Mantenimiento updated: ${updated.id}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: updated.condominioId,
+      accion: 'update',
+      entidad: 'mantenimiento',
+      entidadId: updated.id,
+      detalles: { estado: updated.estado },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({ status: 'success', data: { mantenimiento: updated } });
   } catch (error) {
     logger.error('Error in updateMantenimiento:', error);

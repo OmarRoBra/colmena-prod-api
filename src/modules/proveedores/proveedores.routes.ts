@@ -14,6 +14,13 @@ router.use(authenticate);
 router.get('/', authorize('admin', 'condoAdmin'), proveedoresController.getAllProveedores);
 
 /**
+ * @route   GET /api/v1/proveedores/condominio/:condominioId
+ * @desc    Get all proveedores for a condominium
+ * @access  Private (admin, condoAdmin)
+ */
+router.get('/condominio/:condominioId', authorize('admin', 'condoAdmin'), proveedoresController.getProveedoresByCondominio);
+
+/**
  * @route   GET /api/v1/proveedores/:id
  * @desc    Get proveedor by ID
  * @access  Private (all authenticated users)

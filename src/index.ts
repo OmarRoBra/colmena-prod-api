@@ -38,6 +38,10 @@ import documentosRouter from './modules/documentos/documentos.routes';
 import encuestasRouter from './modules/encuestas/encuestas.routes';
 import familiaresRouter from './modules/familiares/familiares.routes';
 import visitasRouter from './modules/visitas/visitas.routes';
+import cargadoresRouter from './modules/cargadores/cargadores.routes';
+import sesionesCargaRouter from './modules/sesiones-carga/sesiones-carga.routes';
+import notificacionesRouter from './modules/notificaciones/notificaciones.routes';
+import auditLogsRouter from './modules/audit-logs/audit-logs.routes';
 
 function initializeMiddlewares(app: Application): void {
   app.disable('x-powered-by');
@@ -131,6 +135,10 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/encuestas`, encuestasRouter);
   app.use(`${apiPrefix}/familiares`, familiaresRouter);
   app.use(`${apiPrefix}/visitas`, visitasRouter);
+  app.use(`${apiPrefix}/cargadores`, cargadoresRouter);
+  app.use(`${apiPrefix}/sesiones-carga`, sesionesCargaRouter);
+  app.use(`${apiPrefix}/notificaciones`, notificacionesRouter);
+  app.use(`${apiPrefix}/audit-logs`, auditLogsRouter);
 
   app.use(notFoundHandler);
 }
