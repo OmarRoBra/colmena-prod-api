@@ -87,14 +87,18 @@ export const updateMantenimiento = async (req: Request, res: Response, next: Nex
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { estado, asignadoA, costo } = req.body;
+    const { titulo, descripcion, categoria, prioridad, estado, costo, notas } = req.body;
     const [existing] = await db.select().from(mantenimiento).where(eq(mantenimiento.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Solicitud no encontrada'));
 
     const [updated] = await db.update(mantenimiento).set({
+      ...(titulo && { titulo }),
+      ...(descripcion && { descripcion }),
+      ...(categoria && { categoria }),
+      ...(prioridad && { prioridad }),
       ...(estado && { estado }),
-      ...(asignadoA !== undefined && { asignadoA }),
       ...(costo !== undefined && { costo }),
+      ...(notas !== undefined && { notas }),
       ...(estado === 'completado' && { fechaCompletado: new Date() }),
       ...(estado === 'en_proceso' && !existing.fechaInicio && { fechaInicio: new Date() }),
       updatedAt: new Date(),

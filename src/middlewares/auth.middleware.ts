@@ -41,7 +41,6 @@ export const authenticate = async (
     }
 
     const token = authHeader.substring(7);
-    console.log('Authenticating token:', token);
 
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
@@ -52,16 +51,37 @@ export const authenticate = async (
     const supabaseUser = data.user;
 
     // Fetch custom role from our usuarios table
-    const [dbUser] = await db
+    let [dbUser] = await db
       .select({ rol: usuarios.rol })
       .from(usuarios)
       .where(eq(usuarios.id, supabaseUser.id))
       .limit(1);
 
+    // Auto-create profile on first login if it doesn't exist yet
+    if (!dbUser) {
+      const meta = supabaseUser.user_metadata ?? {};
+      const fullName: string = meta.full_name || meta.name || '';
+      const [firstName, ...rest] = fullName.split(' ');
+
+      const [created] = await db
+        .insert(usuarios)
+        .values({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          nombre: meta.nombre || firstName || 'Usuario',
+          apellido: meta.apellido || rest.join(' ') || '',
+          rol: 'condoAdmin',
+        })
+        .onConflictDoNothing()
+        .returning({ rol: usuarios.rol });
+
+      dbUser = created ?? { rol: 'condoAdmin' };
+    }
+
     req.user = {
       userId: supabaseUser.id,
       email: supabaseUser.email || '',
-      rol: dbUser?.rol || supabaseUser.role || '',
+      rol: dbUser?.rol || 'condoAdmin',
     };
 
     next();

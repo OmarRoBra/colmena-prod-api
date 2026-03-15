@@ -49,6 +49,8 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
     const [cond] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!cond) return next(AppError.notFound('Condominio no encontrado'));
 
+    const { razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal } = req.body;
+
     const [newProveedor] = await db.insert(proveedores).values({
       condominioId,
       nombreEmpresa,
@@ -58,10 +60,15 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
       telefono,
       estado: estado || 'active',
       direccion,
-      rfc,
+      rfc: rfc?.toUpperCase() || null,
       calificacion: calificacion || 5,
       inicioContrato: inicioContrato ? new Date(inicioContrato) : null,
       finContrato: finContrato ? new Date(finContrato) : null,
+      // Datos fiscales
+      razonSocial: razonSocial || null,
+      regimenFiscal: regimenFiscal || null,
+      usoCfdi: usoCfdi || 'G03',
+      codigoPostalFiscal: codigoPostalFiscal || null,
     }).returning();
 
     logger.info(`Proveedor created: ${newProveedor.id}`);
@@ -76,10 +83,17 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado, direccion, rfc, calificacion, inicioContrato, finContrato } = req.body;
+    const {
+      nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado,
+      direccion, rfc, calificacion, inicioContrato, finContrato,
+      razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal,
+    } = req.body;
 
     const [existing] = await db.select().from(proveedores).where(eq(proveedores.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Proveedor no encontrado'));
+
+    // Si cambia RFC, invalidar facturapiClienteId
+    const rfcChanged = rfc && rfc.toUpperCase() !== existing.rfc;
 
     const [updated] = await db.update(proveedores).set({
       ...(nombreEmpresa && { nombreEmpresa }),
@@ -89,10 +103,16 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
       ...(telefono !== undefined && { telefono }),
       ...(estado && { estado }),
       ...(direccion !== undefined && { direccion }),
-      ...(rfc !== undefined && { rfc }),
+      ...(rfc !== undefined && { rfc: rfc?.toUpperCase() || null }),
       ...(calificacion !== undefined && { calificacion }),
       ...(inicioContrato !== undefined && { inicioContrato: inicioContrato ? new Date(inicioContrato) : null }),
       ...(finContrato !== undefined && { finContrato: finContrato ? new Date(finContrato) : null }),
+      // Datos fiscales
+      ...(razonSocial !== undefined && { razonSocial }),
+      ...(regimenFiscal !== undefined && { regimenFiscal }),
+      ...(usoCfdi !== undefined && { usoCfdi }),
+      ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
+      ...(rfcChanged && { facturapiClienteId: null }),
       updatedAt: new Date(),
     }).where(eq(proveedores.id, req.params.id)).returning();
 

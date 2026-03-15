@@ -191,12 +191,18 @@ export const createResident = async (
       nombre,
       email,
       telefono,
+      telefonoWhatsapp,
       tipo,
       fechaIngreso,
       documentoIdentidad,
       contactoEmergencia,
       telefonoEmergencia,
       notas,
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      usoCfdi,
+      codigoPostalFiscal,
     } = req.body;
 
     // Verify condominio exists
@@ -252,12 +258,18 @@ export const createResident = async (
         nombre,
         email: email.toLowerCase(),
         telefono,
+        ...(telefonoWhatsapp && { telefonoWhatsapp }),
         tipo: tipo || 'Propietario',
         fechaIngreso: new Date(fechaIngreso),
         documentoIdentidad,
         contactoEmergencia,
         telefonoEmergencia,
         notas,
+        ...(rfc && { rfc }),
+        ...(razonSocial && { razonSocial }),
+        ...(regimenFiscal && { regimenFiscal }),
+        ...(usoCfdi && { usoCfdi }),
+        ...(codigoPostalFiscal && { codigoPostalFiscal }),
       })
       .returning();
 
@@ -336,6 +348,7 @@ export const updateResident = async (
       nombre,
       email,
       telefono,
+      telefonoWhatsapp,
       tipo,
       fechaIngreso,
       documentoIdentidad,
@@ -343,6 +356,11 @@ export const updateResident = async (
       telefonoEmergencia,
       notas,
       activo,
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      usoCfdi,
+      codigoPostalFiscal,
     } = req.body;
 
     // Check if resident exists
@@ -390,6 +408,7 @@ export const updateResident = async (
         ...(nombre && { nombre }),
         ...(email && { email: email.toLowerCase() }),
         ...(telefono && { telefono }),
+        ...(telefonoWhatsapp !== undefined && { telefonoWhatsapp: telefonoWhatsapp || null }),
         ...(tipo && { tipo }),
         ...(fechaIngreso && { fechaIngreso: new Date(fechaIngreso) }),
         ...(documentoIdentidad !== undefined && { documentoIdentidad }),
@@ -397,6 +416,11 @@ export const updateResident = async (
         ...(telefonoEmergencia !== undefined && { telefonoEmergencia }),
         ...(notas !== undefined && { notas }),
         ...(activo !== undefined && { activo }),
+        ...(rfc !== undefined && { rfc }),
+        ...(razonSocial !== undefined && { razonSocial }),
+        ...(regimenFiscal !== undefined && { regimenFiscal }),
+        ...(usoCfdi !== undefined && { usoCfdi }),
+        ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
         updatedAt: new Date(),
       })
       .where(eq(residentes.id, id))

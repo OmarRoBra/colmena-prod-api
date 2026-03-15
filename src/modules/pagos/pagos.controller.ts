@@ -210,7 +210,7 @@ export const updatePago = async (
     }
 
     const { id } = req.params;
-    const { estado, referencia, comprobante, notas } = req.body;
+    const { estado, metodoPago, referencia, comprobante, notas } = req.body;
 
     // Check if pago exists
     const [existingPago] = await db
@@ -228,6 +228,8 @@ export const updatePago = async (
       .update(pagos)
       .set({
         ...(estado && { estado }),
+        // Allow updating metodoPago (e.g. from 'pendiente' to 'tarjeta' when confirming payment)
+        ...(metodoPago && metodoPago !== 'pendiente' && { metodoPago }),
         ...(referencia !== undefined && { referencia }),
         ...(comprobante !== undefined && { comprobante }),
         ...(notas !== undefined && { notas }),

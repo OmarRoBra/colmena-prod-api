@@ -42,6 +42,11 @@ import cargadoresRouter from './modules/cargadores/cargadores.routes';
 import sesionesCargaRouter from './modules/sesiones-carga/sesiones-carga.routes';
 import notificacionesRouter from './modules/notificaciones/notificaciones.routes';
 import auditLogsRouter from './modules/audit-logs/audit-logs.routes';
+import conciliacionRouter from './modules/conciliacion/conciliacion.routes';
+import facturacionRouter from './modules/facturacion/facturacion.routes';
+import proveedoresExternosRouter from './modules/proveedores-externos/proveedores-externos.routes';
+import whatsappRouter from './modules/whatsapp/whatsapp.routes';
+import { whatsappService } from './services/whatsapp.service';
 
 function initializeMiddlewares(app: Application): void {
   app.disable('x-powered-by');
@@ -139,6 +144,10 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/sesiones-carga`, sesionesCargaRouter);
   app.use(`${apiPrefix}/notificaciones`, notificacionesRouter);
   app.use(`${apiPrefix}/audit-logs`, auditLogsRouter);
+  app.use(`${apiPrefix}/conciliacion`, conciliacionRouter);
+  app.use(`${apiPrefix}/facturacion`, facturacionRouter);
+  app.use(`${apiPrefix}/proveedores-externos`, proveedoresExternosRouter);
+  app.use(`${apiPrefix}/whatsapp`, whatsappRouter);
 
   app.use(notFoundHandler);
 }
@@ -196,6 +205,9 @@ async function startServer(): Promise<void> {
 
     const app = createApp();
 
+    // Inicializar WhatsApp (solo en entorno no-serverless)
+    whatsappService.initialize();
+
     const server = app.listen(config.port, () => {
       logger.info(`🚀 Server running on port ${config.port}`);
       logger.info(
@@ -225,6 +237,7 @@ async function startServer(): Promise<void> {
         try {
           await closeDatabase();
           await cacheService.close();
+          await whatsappService.destroy();
           logger.info('✅ Graceful shutdown completed');
           process.exit(0);
         } catch (error) {

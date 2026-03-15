@@ -11,9 +11,13 @@ export const createMantenimientoValidation = [
 
 export const updateMantenimientoValidation = [
   param('id').isUUID(),
+  body('titulo').optional().trim().isLength({ max: 200 }),
+  body('descripcion').optional().trim(),
+  body('categoria').optional().trim().isLength({ max: 100 }),
+  body('prioridad').optional().isIn(['baja', 'media', 'alta', 'urgente']),
   body('estado').optional().isIn(['pendiente', 'en_proceso', 'completado', 'cancelado']),
-  body('asignadoA').optional().isUUID(),
   body('costo').optional().isDecimal(),
+  body('notas').optional().isString(),
 ];
 
 export const getMantenimientoValidation = [param('id').isUUID()];

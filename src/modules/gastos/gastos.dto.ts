@@ -36,6 +36,8 @@ export const createGastoValidation = [
   body('descripcion').optional().trim(),
   body('comprobante').optional().trim().isLength({ max: 500 }),
   body('notas').optional().trim(),
+  // Relación con proveedor
+  body('proveedorId').optional().isUUID().withMessage('proveedorId debe ser UUID válido'),
 ];
 
 export const updateGastoValidation = [
@@ -50,6 +52,8 @@ export const updateGastoValidation = [
   body('descripcion').optional().trim(),
   body('comprobante').optional().trim().isLength({ max: 500 }),
   body('notas').optional().trim(),
+  body('proveedorId').optional().isUUID(),
+  body('tieneFactura').optional().isBoolean(),
 ];
 
 export const getGastoValidation = [

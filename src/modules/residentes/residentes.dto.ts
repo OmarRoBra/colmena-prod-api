@@ -10,6 +10,7 @@ export interface ResidentDTO {
   nombre: string
   email: string
   telefono: string
+  telefonoWhatsapp?: string | null
   tipo: string
   fechaIngreso: string
   documentoIdentidad?: string
@@ -17,6 +18,11 @@ export interface ResidentDTO {
   telefonoEmergencia?: string
   notas?: string
   activo: boolean
+  rfc?: string | null
+  razonSocial?: string | null
+  regimenFiscal?: string | null
+  usoCfdi?: string | null
+  codigoPostalFiscal?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -27,18 +33,25 @@ export interface CreateResidentDTO {
   nombre: string
   email: string
   telefono: string
+  telefonoWhatsapp?: string
   tipo?: string
   fechaIngreso: string
   documentoIdentidad?: string
   contactoEmergencia?: string
   telefonoEmergencia?: string
   notas?: string
+  rfc?: string
+  razonSocial?: string
+  regimenFiscal?: string
+  usoCfdi?: string
+  codigoPostalFiscal?: string
 }
 
 export interface UpdateResidentDTO {
   nombre?: string
   email?: string
   telefono?: string
+  telefonoWhatsapp?: string | null
   tipo?: string
   fechaIngreso?: string
   documentoIdentidad?: string
@@ -46,6 +59,11 @@ export interface UpdateResidentDTO {
   telefonoEmergencia?: string
   notas?: string
   activo?: boolean
+  rfc?: string | null
+  razonSocial?: string | null
+  regimenFiscal?: string | null
+  usoCfdi?: string | null
+  codigoPostalFiscal?: string | null
 }
 
 // ==========================================
@@ -63,7 +81,7 @@ export const createResidentValidation = [
     .withMessage('ID de condominio inválido'),
 
   body('unidadId')
-    .optional()
+    .optional({ checkFalsy: true })
     .isUUID()
     .withMessage('ID de unidad inválido'),
 
@@ -89,8 +107,14 @@ export const createResidentValidation = [
     .isLength({ max: 20 })
     .withMessage('El teléfono no debe exceder 20 caracteres'),
 
+  body('telefonoWhatsapp')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('El teléfono de WhatsApp no debe exceder 20 caracteres'),
+
   body('tipo')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['Propietario', 'Inquilino', 'Familiar'])
     .withMessage('Tipo debe ser Propietario, Inquilino o Familiar'),
 
@@ -101,27 +125,58 @@ export const createResidentValidation = [
     .withMessage('Fecha de ingreso inválida'),
 
   body('documentoIdentidad')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 50 })
     .withMessage('El documento de identidad no debe exceder 50 caracteres'),
 
   body('contactoEmergencia')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 200 })
     .withMessage('El contacto de emergencia no debe exceder 200 caracteres'),
 
   body('telefonoEmergencia')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 20 })
     .withMessage('El teléfono de emergencia no debe exceder 20 caracteres'),
 
   body('notas')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Las notas deben ser texto'),
+
+  // Fiscal fields
+  body('rfc')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 13 })
+    .withMessage('El RFC no debe exceder 13 caracteres'),
+
+  body('razonSocial')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage('La razón social no debe exceder 300 caracteres'),
+
+  body('regimenFiscal')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('El régimen fiscal no debe exceder 10 caracteres'),
+
+  body('usoCfdi')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('El uso CFDI no debe exceder 10 caracteres'),
+
+  body('codigoPostalFiscal')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('El código postal fiscal no debe exceder 10 caracteres'),
 ];
 
 /**
@@ -133,54 +188,60 @@ export const updateResidentValidation = [
     .withMessage('ID de residente inválido'),
 
   body('nombre')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 200 })
     .withMessage('El nombre no debe exceder 200 caracteres'),
 
   body('email')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isEmail()
     .withMessage('Email inválido')
     .normalizeEmail(),
 
   body('telefono')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 20 })
     .withMessage('El teléfono no debe exceder 20 caracteres'),
 
+  body('telefonoWhatsapp')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('El teléfono de WhatsApp no debe exceder 20 caracteres'),
+
   body('tipo')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['Propietario', 'Inquilino', 'Familiar'])
     .withMessage('Tipo debe ser Propietario, Inquilino o Familiar'),
 
   body('fechaIngreso')
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage('Fecha de ingreso inválida'),
 
   body('documentoIdentidad')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 50 })
     .withMessage('El documento de identidad no debe exceder 50 caracteres'),
 
   body('contactoEmergencia')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 200 })
     .withMessage('El contacto de emergencia no debe exceder 200 caracteres'),
 
   body('telefonoEmergencia')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 20 })
     .withMessage('El teléfono de emergencia no debe exceder 20 caracteres'),
 
   body('notas')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Las notas deben ser texto'),
 
@@ -188,6 +249,37 @@ export const updateResidentValidation = [
     .optional()
     .isBoolean()
     .withMessage('Activo debe ser true o false'),
+
+  // Fiscal fields
+  body('rfc')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 13 })
+    .withMessage('El RFC no debe exceder 13 caracteres'),
+
+  body('razonSocial')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage('La razón social no debe exceder 300 caracteres'),
+
+  body('regimenFiscal')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('El régimen fiscal no debe exceder 10 caracteres'),
+
+  body('usoCfdi')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('El uso CFDI no debe exceder 10 caracteres'),
+
+  body('codigoPostalFiscal')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('El código postal fiscal no debe exceder 10 caracteres'),
 ];
 
 /**

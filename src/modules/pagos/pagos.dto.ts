@@ -13,8 +13,8 @@ export const createPagoValidation = [
   body('monto')
     .notEmpty()
     .withMessage('El monto es requerido')
-    .isDecimal()
-    .withMessage('El monto debe ser un número decimal'),
+    .isFloat({ min: 0.01 })
+    .withMessage('El monto debe ser un número mayor a 0'),
 
   body('concepto')
     .trim()
@@ -58,6 +58,11 @@ export const updatePagoValidation = [
     .optional()
     .isIn(['pendiente', 'completado', 'rechazado'])
     .withMessage('El estado debe ser pendiente, completado o rechazado'),
+
+  body('metodoPago')
+    .optional()
+    .isIn(['efectivo', 'transferencia', 'tarjeta', 'pendiente'])
+    .withMessage('El método de pago debe ser efectivo, transferencia, tarjeta o pendiente'),
 
   body('referencia')
     .optional()
