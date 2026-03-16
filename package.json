@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "automations:run": "ts-node src/scripts/run-automations.ts"
   },
   "keywords": [
     "condominio",
@@ -51,6 +52,7 @@
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.27",
     "uuid": "^9.0.1",
+    "web-push": "^3.6.7",
     "winston": "^3.18.3"
   },
   "devDependencies": {
@@ -64,6 +66,7 @@
     "@types/pg": "^8.16.0",
     "@types/supertest": "^6.0.3",
     "@types/uuid": "^9.0.8",
+    "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "drizzle-kit": "^0.31.8",

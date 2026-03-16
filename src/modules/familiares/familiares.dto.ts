@@ -12,6 +12,13 @@ export const createFamiliarValidation = [
   body('telefono').optional().trim().isLength({ max: 20 }),
 ];
 
+export const updateFamiliarValidation = [
+  param('id').isUUID().withMessage('id debe ser un UUID válido'),
+  body('nombre').optional().trim().isLength({ max: 200 }),
+  body('relacion').optional().trim().isLength({ max: 100 }),
+  body('telefono').optional().trim().isLength({ max: 20 }),
+];
+
 export const deleteFamiliarValidation = [
   param('id').isUUID().withMessage('id debe ser un UUID válido'),
 ];

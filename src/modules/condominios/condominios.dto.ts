@@ -71,6 +71,11 @@ export const createCondominioValidation = [
     .optional()
     .isIn(['activo', 'inactivo', 'archivado'])
     .withMessage('El status del condominio debe ser activo, inactivo o archivado'),
+
+  body('configuracion')
+    .optional()
+    .isObject()
+    .withMessage('La configuración debe ser un objeto JSON'),
 ];
 
 /**
@@ -151,6 +156,11 @@ export const updateCondominioValidation = [
     .optional()
     .isBoolean()
     .withMessage('Activo debe ser un valor booleano'),
+
+  body('configuracion')
+    .optional()
+    .isObject()
+    .withMessage('La configuración debe ser un objeto JSON'),
 ];
 
 /**

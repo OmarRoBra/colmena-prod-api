@@ -26,7 +26,7 @@ export const register = async (
 
     const supabaseUserId = req.user!.userId;
     const supabaseEmail = req.user!.email;
-    const { nombre, apellido, telefono, rol } = req.body;
+    const { nombre, apellido, telefono } = req.body;
 
     // Check if profile already exists
     const existing = await db
@@ -47,7 +47,7 @@ export const register = async (
         apellido,
         email: supabaseEmail,
         telefono,
-        rol: rol || 'owner',
+        rol: 'owner',
       })
       .returning();
 

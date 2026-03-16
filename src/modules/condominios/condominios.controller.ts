@@ -264,6 +264,7 @@ export const createCondominio = async (
       gerenteId,
       thumbnail,
       statusCondominio,
+      configuracion,
     } = req.body;
 
     // If gerenteId is provided, verify it exists
@@ -300,6 +301,7 @@ export const createCondominio = async (
         gerenteId,
         thumbnail,
         statusCondominio: statusCondominio || 'activo',
+        configuracion: configuracion || null,
       })
       .returning();
 
@@ -346,6 +348,7 @@ export const updateCondominio = async (
       thumbnail,
       statusCondominio,
       activo,
+      configuracion,
     } = req.body;
 
     // Check if condominio exists
@@ -394,6 +397,7 @@ export const updateCondominio = async (
         ...(thumbnail !== undefined && { thumbnail }),
         ...(statusCondominio !== undefined && { statusCondominio }),
         ...(activo !== undefined && { activo }),
+        ...(configuracion !== undefined && { configuracion }),
         updatedAt: new Date(),
       })
       .where(eq(condominios.id, id))

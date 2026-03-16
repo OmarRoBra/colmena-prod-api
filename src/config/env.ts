@@ -27,9 +27,11 @@ export const config = {
   },
 
   redis: {
+    url: process.env.REDIS_URL || '',
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
+    tls: process.env.REDIS_TLS === 'true',
     cache: {
       enabled: process.env.REDIS_CACHE_ENABLED !== 'false',
       keyPrefix: process.env.REDIS_CACHE_PREFIX || 'colmena:cache:',
@@ -45,8 +47,21 @@ export const config = {
     from: process.env.MAIL_FROM || 'noreply@condominio.com',
   },
 
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || '',
+    privateKey: process.env.VAPID_PRIVATE_KEY || '',
+    subject: process.env.VAPID_SUBJECT || 'mailto:admin@condoadmin.com',
+  },
+
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+    origin:
+      process.env.CORS_ORIGIN ||
+      'http://localhost:3000,http://localhost:3001',
+  },
+
+  bodyLimit: {
+    json: process.env.JSON_BODY_LIMIT || '5mb',
+    urlEncoded: process.env.URLENCODED_BODY_LIMIT || '5mb',
   },
 
   rateLimit: {

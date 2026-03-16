@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
-import { asambleas, condominios } from '../../db/schema';
+import { asambleas, condominios, comites } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
 
@@ -48,13 +48,32 @@ export const createAsamblea = async (req: Request, res: Response, next: NextFunc
     if (!errors.isEmpty()) {
       return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
     }
-    const { condominioId, titulo, descripcion, fecha, ubicacion, tipo } = req.body;
+    const { condominioId, titulo, descripcion, fecha, ubicacion, tipo, scope, comiteId } = req.body;
 
     const [condominio] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!condominio) return next(AppError.notFound('Condominio no encontrado'));
 
+    if (scope === 'committee') {
+      if (!comiteId) {
+        return next(AppError.badRequest('Debes seleccionar un comité para una asamblea de comité'));
+      }
+      const [comite] = await db.select().from(comites).where(eq(comites.id, comiteId)).limit(1);
+      if (!comite) return next(AppError.notFound('Comité no encontrado'));
+      if (comite.condominioId !== condominioId) {
+        return next(AppError.badRequest('El comité seleccionado no pertenece a este condominio'));
+      }
+    }
+
     const [newAsamblea] = await db.insert(asambleas).values({
-      condominioId, titulo, descripcion, fecha: new Date(fecha), ubicacion, tipo, estado: 'programada',
+      condominioId,
+      comiteId: scope === 'committee' ? comiteId : null,
+      titulo,
+      descripcion,
+      fecha: new Date(fecha),
+      ubicacion,
+      tipo,
+      scope: scope === 'committee' ? 'committee' : 'general',
+      estado: 'programada',
     }).returning();
 
     logger.info(`Asamblea created: ${newAsamblea.id}`);
@@ -71,11 +90,30 @@ export const updateAsamblea = async (req: Request, res: Response, next: NextFunc
     if (!errors.isEmpty()) {
       return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
     }
-    const { estado, acuerdos } = req.body;
+    const { titulo, descripcion, fecha, ubicacion, tipo, scope, comiteId, estado, acuerdos } = req.body;
     const [existing] = await db.select().from(asambleas).where(eq(asambleas.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Asamblea no encontrada'));
 
+    if (scope === 'committee') {
+      if (!comiteId) {
+        return next(AppError.badRequest('Debes seleccionar un comité para una asamblea de comité'));
+      }
+      const [comite] = await db.select().from(comites).where(eq(comites.id, comiteId)).limit(1);
+      if (!comite) return next(AppError.notFound('Comité no encontrado'));
+      if (comite.condominioId !== existing.condominioId) {
+        return next(AppError.badRequest('El comité seleccionado no pertenece a este condominio'));
+      }
+    }
+
     const [updated] = await db.update(asambleas).set({
+      ...(titulo !== undefined && { titulo }),
+      ...(descripcion !== undefined && { descripcion }),
+      ...(fecha !== undefined && { fecha: new Date(fecha) }),
+      ...(ubicacion !== undefined && { ubicacion }),
+      ...(tipo !== undefined && { tipo }),
+      ...(scope !== undefined && { scope }),
+      ...(scope !== undefined && { comiteId: scope === 'committee' ? comiteId : null }),
+      ...(scope === undefined && comiteId !== undefined && { comiteId }),
       ...(estado && { estado }),
       ...(acuerdos !== undefined && { acuerdos }),
       updatedAt: new Date(),

@@ -120,6 +120,25 @@ export const createComite = async (req: Request, res: Response, next: NextFuncti
       estado: 'activo',
     }).returning();
 
+    const creatorUserId = req.user?.userId;
+    if (creatorUserId) {
+      const [creatorResident] = await db
+        .select()
+        .from(residentes)
+        .where(and(eq(residentes.condominioId, condominioId), eq(residentes.usuarioId, creatorUserId)))
+        .limit(1);
+
+      if (creatorResident) {
+        await db.insert(comiteMiembros).values({
+          comiteId: newComite.id,
+          residenteId: creatorResident.id,
+          role: 'vocal',
+          fechaIngreso: fechaFormacion,
+          activo: true,
+        });
+      }
+    }
+
     logger.info(`Comité created: ${newComite.id}`);
     res.status(201).json({
       status: 'success',

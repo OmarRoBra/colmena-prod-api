@@ -38,7 +38,12 @@ npm run dev      # Desarrollo con hot-reload
 npm run build    # Compilar TypeScript
 npm start        # Producción
 npm run lint     # Linter
+npm run automations:run # Ejecuta el sweep de automatizaciones manualmente
 ```
+
+## 🤖 Automatizaciones en producción
+
+La API ya incluye un runner dedicado para automatizaciones. La guía recomendada de despliegue y cron está en [docs/automation-runner.md](./docs/automation-runner.md).
 
 ## 📧 Soporte
 

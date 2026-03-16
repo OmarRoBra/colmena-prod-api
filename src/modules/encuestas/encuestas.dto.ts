@@ -72,3 +72,11 @@ export const createRespuestaValidation = [
     .notEmpty().withMessage('Las respuestas son requeridas')
     .isObject().withMessage('Las respuestas deben ser un objeto'),
 ];
+
+export const createResidentRespuestaValidation = [
+  param('id').isUUID().withMessage('ID de encuesta inválido'),
+
+  body('respuestas')
+    .notEmpty().withMessage('Las respuestas son requeridas')
+    .isObject().withMessage('Las respuestas deben ser un objeto'),
+];

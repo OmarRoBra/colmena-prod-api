@@ -1,0 +1,2 @@
+ALTER TABLE pagos
+DROP COLUMN IF EXISTS fecha_limite;

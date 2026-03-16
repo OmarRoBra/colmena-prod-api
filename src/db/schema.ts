@@ -71,6 +71,8 @@ export const unidades = pgTable('unidades', {
     precision: 10,
     scale: 2,
   }).notNull(),
+  referenciaUnica: varchar('referencia_unica', { length: 20 }),
+  saldoAFavor: decimal('saldo_a_favor', { precision: 10, scale: 2 }).notNull().default('0'),
   notas: text('notas'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -92,9 +94,20 @@ export const pagos = pgTable('pagos', {
   metodoPago: varchar('metodo_pago', { length: 50 }).notNull(), // efectivo, transferencia, tarjeta
   referencia: varchar('referencia', { length: 100 }),
   estado: varchar('estado', { length: 50 }).notNull().default('pendiente'), // pendiente, completado, rechazado
+  fechaLimite: timestamp('fecha_limite'),
   fechaPago: timestamp('fecha_pago'),
+  reconciliado: boolean('reconciliado').notNull().default(false),
   comprobante: varchar('comprobante', { length: 500 }), // URL to receipt
   notas: text('notas'),
+  creditoAplicado: decimal('credito_aplicado', { precision: 10, scale: 2 }).notNull().default('0'),
+  montoPagado: decimal('monto_pagado', { precision: 10, scale: 2 }).notNull().default('0'),
+  mora: decimal('mora', { precision: 10, scale: 2 }).notNull().default('0'),
+  porcentajeMora: decimal('porcentaje_mora', { precision: 5, scale: 2 }).notNull().default('0'),
+  moraCalculadaAt: timestamp('mora_calculada_at'),
+  motivoRechazo: varchar('motivo_rechazo', { length: 500 }),
+  aprobadoPor: uuid('aprobado_por').references(() => usuarios.id),
+  fechaAprobacion: timestamp('fecha_aprobacion'),
+  deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -164,6 +177,8 @@ export const gastos = pgTable('gastos', {
   monto: decimal('monto', { precision: 10, scale: 2 }).notNull(),
   categoria: varchar('categoria', { length: 100 }).notNull(), // mantenimiento, servicios, nomina, seguros, impuestos, otro
   fechaGasto: timestamp('fecha_gasto').notNull(),
+  reconciliado: boolean('reconciliado').notNull().default(false),
+  referenciaExterna: varchar('referencia_externa', { length: 100 }),
   comprobante: varchar('comprobante', { length: 500 }),
   notas: text('notas'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -178,11 +193,13 @@ export const asambleas = pgTable('asambleas', {
   condominioId: uuid('condominio_id')
     .notNull()
     .references(() => condominios.id, { onDelete: 'cascade' }),
+  comiteId: uuid('comite_id').references(() => comites.id, { onDelete: 'set null' }),
   titulo: varchar('titulo', { length: 200 }).notNull(),
   descripcion: text('descripcion'),
   fecha: timestamp('fecha').notNull(),
   ubicacion: varchar('ubicacion', { length: 200 }),
   tipo: varchar('tipo', { length: 50 }).notNull(), // ordinaria, extraordinaria
+  scope: varchar('scope', { length: 20 }).notNull().default('general'), // general, committee
   estado: varchar('estado', { length: 50 }).notNull().default('programada'), // programada, en_curso, finalizada, cancelada
   documentos: json('documentos'), // Array of document URLs
   acuerdos: text('acuerdos'),
@@ -250,6 +267,63 @@ export const reglamentos = pgTable('reglamentos', {
 });
 
 // ==========================================
+// REGLAMENTO ACUSES (Regulation acknowledgements)
+// ==========================================
+export const reglamentoAcuses = pgTable('reglamento_acuses', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  reglamentoId: uuid('reglamento_id')
+    .notNull()
+    .references(() => reglamentos.id, { onDelete: 'cascade' }),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  residenteId: uuid('residente_id')
+    .notNull()
+    .references(() => residentes.id, { onDelete: 'cascade' }),
+  usuarioId: uuid('usuario_id').references(() => usuarios.id, { onDelete: 'set null' }),
+  version: varchar('version', { length: 20 }).notNull(),
+  acknowledgedAt: timestamp('acknowledged_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ==========================================
+// RESIDENTE CHECKLISTS (Onboarding / Offboarding)
+// ==========================================
+export const residenteChecklists = pgTable('residente_checklists', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  residenteId: uuid('residente_id')
+    .notNull()
+    .references(() => residentes.id, { onDelete: 'cascade' }),
+  tipo: varchar('tipo', { length: 30 }).notNull(), // onboarding | offboarding
+  titulo: varchar('titulo', { length: 200 }).notNull(),
+  descripcion: text('descripcion'),
+  estado: varchar('estado', { length: 30 }).notNull().default('pendiente'), // pendiente | completado | cancelado
+  dueAt: timestamp('due_at'),
+  completedAt: timestamp('completed_at'),
+  metadata: json('metadata'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
+// AUTOMATION RUNS (Execution history)
+// ==========================================
+export const automationRuns = pgTable('automation_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id').references(() => condominios.id, { onDelete: 'cascade' }),
+  tipo: varchar('tipo', { length: 50 }).notNull().default('sweep'),
+  estado: varchar('estado', { length: 30 }).notNull().default('running'), // running | completed | failed
+  summary: json('summary'),
+  error: text('error'),
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ==========================================
 // MANTENIMIENTO (Maintenance requests)
 // ==========================================
 export const mantenimiento = pgTable('mantenimiento', {
@@ -267,7 +341,7 @@ export const mantenimiento = pgTable('mantenimiento', {
   categoria: varchar('categoria', { length: 100 }).notNull(), // fontaneria, electricidad, pintura, etc.
   prioridad: varchar('prioridad', { length: 50 }).notNull().default('media'), // baja, media, alta, urgente
   estado: varchar('estado', { length: 50 }).notNull().default('pendiente'), // pendiente, en_proceso, completado, cancelado
-  asignadoA: uuid('asignado_a').references(() => usuarios.id),
+  asignadoA: varchar('asignado_a', { length: 200 }),
   costo: decimal('costo', { precision: 10, scale: 2 }),
   imagenes: json('imagenes'), // Array of image URLs
   fechaInicio: timestamp('fecha_inicio'),
@@ -452,6 +526,7 @@ export const familiares = pgTable('familiares', {
   nombre: varchar('nombre', { length: 200 }).notNull(),
   telefono: varchar('telefono', { length: 20 }),
   relacion: varchar('relacion', { length: 100 }).notNull(), // hijo, esposa, padre, hermano, etc.
+  qrToken: varchar('qr_token', { length: 100 }).unique(), // permanent QR pass for familiar
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -469,6 +544,8 @@ export const visitas = pgTable('visitas', {
   familiarId: uuid('familiar_id')
     .references(() => familiares.id, { onDelete: 'set null' }),
   nombreVisitante: varchar('nombre_visitante', { length: 200 }).notNull(),
+  tipo: varchar('tipo', { length: 50 }).notNull().default('visita'), // visita | familiar | paqueteria
+  cantidadPersonas: integer('cantidad_personas').notNull().default(1),
   fechaEsperada: timestamp('fecha_esperada').notNull(),
   qrToken: varchar('qr_token', { length: 100 }).notNull().unique(),
   estado: varchar('estado', { length: 50 }).notNull().default('pendiente'), // pendiente | llegada | salida
@@ -539,6 +616,18 @@ export const notificaciones = pgTable('notificaciones', {
 });
 
 // ==========================================
+// PUSH SUBSCRIPTIONS (Web Push API)
+// ==========================================
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  usuarioId: uuid('usuario_id').notNull().references(() => usuarios.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ==========================================
 // AUDIT LOGS (Activity / Audit Trail)
 // ==========================================
 export const auditLogs = pgTable('audit_logs', {
@@ -574,6 +663,7 @@ export const condominiosRelations = relations(condominios, ({ one, many }) => ({
   asambleas: many(asambleas),
   comites: many(comites),
   reglamentos: many(reglamentos),
+  reglamentoAcuses: many(reglamentoAcuses),
   mantenimiento: many(mantenimiento),
   trabajadores: many(trabajadores),
   proveedores: many(proveedores),
@@ -587,6 +677,8 @@ export const condominiosRelations = relations(condominios, ({ one, many }) => ({
   cargadores: many(cargadores),
   sesionesCarga: many(sesionesCarga),
   notificaciones: many(notificaciones),
+  residenteChecklists: many(residenteChecklists),
+  automationRuns: many(automationRuns),
 }));
 
 export const areasComunesRelations = relations(areasComunes, ({ one, many }) => ({
@@ -618,6 +710,53 @@ export const residentesRelations = relations(residentes, ({ one, many }) => ({
   }),
   familiares: many(familiares),
   visitas: many(visitas),
+  reglamentoAcuses: many(reglamentoAcuses),
+  checklists: many(residenteChecklists),
+}));
+
+export const reglamentosRelations = relations(reglamentos, ({ one, many }) => ({
+  condominio: one(condominios, {
+    fields: [reglamentos.condominioId],
+    references: [condominios.id],
+  }),
+  acuses: many(reglamentoAcuses),
+}));
+
+export const reglamentoAcusesRelations = relations(reglamentoAcuses, ({ one }) => ({
+  reglamento: one(reglamentos, {
+    fields: [reglamentoAcuses.reglamentoId],
+    references: [reglamentos.id],
+  }),
+  condominio: one(condominios, {
+    fields: [reglamentoAcuses.condominioId],
+    references: [condominios.id],
+  }),
+  residente: one(residentes, {
+    fields: [reglamentoAcuses.residenteId],
+    references: [residentes.id],
+  }),
+  usuario: one(usuarios, {
+    fields: [reglamentoAcuses.usuarioId],
+    references: [usuarios.id],
+  }),
+}));
+
+export const residenteChecklistsRelations = relations(residenteChecklists, ({ one }) => ({
+  condominio: one(condominios, {
+    fields: [residenteChecklists.condominioId],
+    references: [condominios.id],
+  }),
+  residente: one(residentes, {
+    fields: [residenteChecklists.residenteId],
+    references: [residentes.id],
+  }),
+}));
+
+export const automationRunsRelations = relations(automationRuns, ({ one }) => ({
+  condominio: one(condominios, {
+    fields: [automationRuns.condominioId],
+    references: [condominios.id],
+  }),
 }));
 
 export const comitesRelations = relations(comites, ({ one, many }) => ({
@@ -655,6 +794,82 @@ export const encuestaRespuestasRelations = relations(encuestaRespuestas, ({ one 
   unidad: one(unidades, {
     fields: [encuestaRespuestas.unidadId],
     references: [unidades.id],
+  }),
+}));
+
+// ==========================================
+// CONCILIACIONES (Reconciliation Sessions)
+// ==========================================
+export const conciliaciones = pgTable('conciliaciones', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  nombre: varchar('nombre', { length: 200 }).notNull(), // e.g. "Conciliación Febrero 2026"
+  estado: varchar('estado', { length: 20 }).notNull().default('borrador'), // borrador, revisado, cerrado
+  archivoOriginal: varchar('archivo_original', { length: 255 }), // uploaded file name
+  totalMovimientos: integer('total_movimientos').notNull().default(0),
+  totalConciliados: integer('total_conciliados').notNull().default(0),
+  totalIgnorados: integer('total_ignorados').notNull().default(0),
+  totalPendientes: integer('total_pendientes').notNull().default(0),
+  cerradoPor: uuid('cerrado_por').references(() => usuarios.id),
+  cerradoAt: timestamp('cerrado_at'),
+  notas: text('notas'),
+  createdBy: uuid('created_by')
+    .notNull()
+    .references(() => usuarios.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
+// CONCILIACION_MOVIMIENTOS (Bank Statement Movements)
+// ==========================================
+export const conciliacionMovimientos = pgTable('conciliacion_movimientos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  conciliacionId: uuid('conciliacion_id')
+    .notNull()
+    .references(() => conciliaciones.id, { onDelete: 'cascade' }),
+  fecha: date('fecha').notNull(),
+  descripcion: text('descripcion').notNull(),
+  referenciaBanco: varchar('referencia_banco', { length: 100 }),
+  monto: decimal('monto', { precision: 12, scale: 2 }).notNull(),
+  tipo: varchar('tipo', { length: 10 }).notNull(), // ingreso, egreso
+  // Match result
+  estado: varchar('estado', { length: 20 }).notNull().default('pendiente'), // pendiente, conciliado, ignorado, nuevo_gasto
+  confianza: integer('confianza'), // match confidence 0-100
+  pagoId: uuid('pago_id').references(() => pagos.id),
+  gastoId: uuid('gasto_id').references(() => gastos.id),
+  // Audit
+  confirmadoPor: uuid('confirmado_por').references(() => usuarios.id),
+  confirmadoAt: timestamp('confirmado_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const conciliacionesRelations = relations(conciliaciones, ({ one, many }) => ({
+  condominio: one(condominios, {
+    fields: [conciliaciones.condominioId],
+    references: [condominios.id],
+  }),
+  creador: one(usuarios, {
+    fields: [conciliaciones.createdBy],
+    references: [usuarios.id],
+  }),
+  movimientos: many(conciliacionMovimientos),
+}));
+
+export const conciliacionMovimientosRelations = relations(conciliacionMovimientos, ({ one }) => ({
+  conciliacion: one(conciliaciones, {
+    fields: [conciliacionMovimientos.conciliacionId],
+    references: [conciliaciones.id],
+  }),
+  pago: one(pagos, {
+    fields: [conciliacionMovimientos.pagoId],
+    references: [pagos.id],
+  }),
+  gasto: one(gastos, {
+    fields: [conciliacionMovimientos.gastoId],
+    references: [gastos.id],
   }),
 }));
 

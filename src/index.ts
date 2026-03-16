@@ -15,6 +15,7 @@ import { rateLimiter } from './middlewares/rateLimit.middleware';
 import logger from './utils/logger';
 import { config } from './config/env'; // ⬅️ te faltaba en tu snippet, dices que ya existe
 import { swaggerSpec } from './config/swagger';
+import { AppError } from './utils/appError';
 
 // Routers
 import authRouter from './modules/auth/auth.routes';
@@ -41,10 +42,27 @@ import visitasRouter from './modules/visitas/visitas.routes';
 import cargadoresRouter from './modules/cargadores/cargadores.routes';
 import sesionesCargaRouter from './modules/sesiones-carga/sesiones-carga.routes';
 import notificacionesRouter from './modules/notificaciones/notificaciones.routes';
+import pushRouter from './modules/push/push.routes';
 import auditLogsRouter from './modules/audit-logs/audit-logs.routes';
+import automationsRouter from './modules/automations/automations.routes';
+import conciliacionesRouter from './modules/conciliaciones/conciliaciones.routes';
+import { startAutomationScheduler, stopAutomationScheduler } from './services/automation.service';
+
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/$/, '');
+}
 
 function initializeMiddlewares(app: Application): void {
   app.disable('x-powered-by');
+  const configuredOrigins = config.cors.origin
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean);
+  const devOrigins =
+    config.nodeEnv === 'development'
+      ? ['http://localhost:3000', 'http://localhost:3001']
+      : [];
+  const allowedOrigins = new Set([...configuredOrigins, ...devOrigins]);
 
   // Si tu app está detrás de proxy/load balancer (Heroku, Render, Nginx, etc.)
   // ayuda a que rate-limit / IP funcione mejor:
@@ -63,7 +81,24 @@ function initializeMiddlewares(app: Application): void {
       },
     })
   );
-  app.use(cors());
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        const normalizedOrigin = normalizeOrigin(origin);
+        if (allowedOrigins.has(normalizedOrigin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(AppError.forbidden('Origin not allowed by CORS'));
+      },
+    })
+  );
 
   app.use(compression());
 
@@ -71,8 +106,8 @@ function initializeMiddlewares(app: Application): void {
     app.use(morgan('dev'));
   }
 
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  app.use(express.json({ limit: config.bodyLimit.json }));
+  app.use(express.urlencoded({ extended: true, limit: config.bodyLimit.urlEncoded }));
 
   // Idealmente NO rate-limit al health
   // (en tu versión decías que podrías moverlo)
@@ -138,7 +173,10 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/cargadores`, cargadoresRouter);
   app.use(`${apiPrefix}/sesiones-carga`, sesionesCargaRouter);
   app.use(`${apiPrefix}/notificaciones`, notificacionesRouter);
+  app.use(`${apiPrefix}/push`, pushRouter);
   app.use(`${apiPrefix}/audit-logs`, auditLogsRouter);
+  app.use(`${apiPrefix}/automations`, automationsRouter);
+  app.use(`${apiPrefix}/conciliaciones`, conciliacionesRouter);
 
   app.use(notFoundHandler);
 }
@@ -207,6 +245,8 @@ async function startServer(): Promise<void> {
       );
     });
 
+    startAutomationScheduler();
+
     server.on('error', (error) => {
       logger.error('❌ Server error:', error);
     });
@@ -223,6 +263,7 @@ async function startServer(): Promise<void> {
 
       server.close(async () => {
         try {
+          stopAutomationScheduler();
           await closeDatabase();
           await cacheService.close();
           logger.info('✅ Graceful shutdown completed');

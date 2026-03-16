@@ -15,6 +15,7 @@ export interface UnitDTO {
   banos: number
   estacionamientos: number
   cuotaMantenimiento: number
+  referenciaUnica: string | null
   notas?: string
   createdAt: string
   updatedAt: string
@@ -197,4 +198,25 @@ export const getUnidadesByCondominioValidation = [
   param('condominiumId')
     .isUUID()
     .withMessage('ID de condominio inválido'),
+];
+
+/**
+ * Validation rules for adding credit (saldo a favor) to a unit
+ */
+export const addCreditValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de unidad inválido'),
+
+  body('monto')
+    .notEmpty()
+    .withMessage('El monto es requerido')
+    .isDecimal({ decimal_digits: '0,2' })
+    .withMessage('El monto debe ser un número decimal válido'),
+
+  body('concepto')
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('El concepto no debe exceder 200 caracteres'),
 ];

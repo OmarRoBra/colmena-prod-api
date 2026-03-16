@@ -39,6 +39,7 @@ export interface UpdateResidentDTO {
   nombre?: string
   email?: string
   telefono?: string
+  unidadId?: string
   tipo?: string
   fechaIngreso?: string
   documentoIdentidad?: string
@@ -151,6 +152,11 @@ export const updateResidentValidation = [
     .isLength({ max: 20 })
     .withMessage('El teléfono no debe exceder 20 caracteres'),
 
+  body('unidadId')
+    .optional({ nullable: true })
+    .custom((value) => value === undefined || value === null || value === '' || /^[0-9a-fA-F-]{36}$/.test(String(value)))
+    .withMessage('ID de unidad inválido'),
+
   body('tipo')
     .optional()
     .isIn(['Propietario', 'Inquilino', 'Familiar'])
@@ -206,4 +212,38 @@ export const getResidentsByUnitValidation = [
   param('unidadId')
     .isUUID()
     .withMessage('ID de unidad inválido'),
+];
+
+export const getResidentChecklistValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de residente inválido'),
+];
+
+export const updateChecklistItemValidation = [
+  param('checklistId')
+    .isUUID()
+    .withMessage('ID de checklist inválido'),
+  body('estado')
+    .optional()
+    .isIn(['pendiente', 'completado', 'cancelado'])
+    .withMessage('Estado inválido'),
+];
+
+export const cleanupResidentAccessValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de residente inválido'),
+  body('familyIds')
+    .optional()
+    .isArray()
+    .withMessage('familyIds debe ser un arreglo'),
+  body('familyIds.*')
+    .optional()
+    .isUUID()
+    .withMessage('Cada familiar debe tener un ID válido'),
+  body('closeOpenVisits')
+    .optional()
+    .isBoolean()
+    .withMessage('closeOpenVisits debe ser true o false'),
 ];

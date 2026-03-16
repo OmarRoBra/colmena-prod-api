@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { reservaciones, condominios, unidades, areasComunes } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { notifyReservationCreated, notifyReservationStatusChange } from '../../services/automation.service';
 
 /**
  * Get all reservaciones (admin)
@@ -208,6 +209,9 @@ export const createReservacion = async (
       .returning();
 
     logger.info(`Reservacion created: ${newReservacion.id}`);
+    void notifyReservationCreated(newReservacion).catch((automationError) => {
+      logger.error('Reservation create automation failed:', automationError);
+    });
 
     res.status(201).json({
       status: 'success',
@@ -295,6 +299,9 @@ export const updateReservacion = async (
       .returning();
 
     logger.info(`Reservacion updated: ${updatedReservacion.id}`);
+    void notifyReservationStatusChange(updatedReservacion, existingReservacion).catch((automationError) => {
+      logger.error('Reservation update automation failed:', automationError);
+    });
 
     res.status(200).json({
       status: 'success',
@@ -354,6 +361,9 @@ export const aprobarReservacion = async (
       .returning();
 
     logger.info(`Reservacion approved: ${updated.id} by ${userId}`);
+    void notifyReservationStatusChange(updated, existing).catch((automationError) => {
+      logger.error('Reservation approval automation failed:', automationError);
+    });
 
     res.status(200).json({
       status: 'success',
@@ -412,6 +422,9 @@ export const rechazarReservacion = async (
       .returning();
 
     logger.info(`Reservacion rejected: ${updated.id}`);
+    void notifyReservationStatusChange(updated, existing).catch((automationError) => {
+      logger.error('Reservation rejection automation failed:', automationError);
+    });
 
     res.status(200).json({
       status: 'success',

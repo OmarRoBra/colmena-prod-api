@@ -26,8 +26,8 @@ API REST para la gestión integral de condominios.
 - **serviceProvider**: Proveedor de servicios externo
 
 ## Autenticación:
-Usa el endpoint \`/api/v1/auth/login\` para obtener un token JWT.
-Luego incluye el token en el header Authorization: \`Bearer {token}\`
+El acceso usa tokens JWT emitidos por Supabase Auth desde el frontend.
+Incluye ese token en el header Authorization: \`Bearer {token}\`
     `,
     contact: {
       name: 'API Support',
@@ -67,7 +67,7 @@ Luego incluye el token en el header Authorization: \`Bearer {token}\`
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Enter your JWT token obtained from /auth/login',
+        description: 'Enter your Supabase JWT token from the authenticated frontend session',
       },
     },
     schemas: {
@@ -94,42 +94,13 @@ Luego incluye el token en el header Authorization: \`Bearer {token}\`
       },
 
       // Auth schemas
-      LoginRequest: {
-        type: 'object',
-        required: ['email', 'password'],
-        properties: {
-          email: { type: 'string', format: 'email', example: 'test@example.com' },
-          password: { type: 'string', format: 'password', example: 'password123' },
-        },
-      },
-      LoginResponse: {
-        type: 'object',
-        properties: {
-          status: { type: 'string', example: 'success' },
-          message: { type: 'string', example: 'Login exitoso' },
-          data: {
-            type: 'object',
-            properties: {
-              token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
-              user: { $ref: '#/components/schemas/Usuario' },
-            },
-          },
-        },
-      },
       RegisterRequest: {
         type: 'object',
-        required: ['nombre', 'apellido', 'email', 'password'],
+        required: ['nombre', 'apellido'],
         properties: {
           nombre: { type: 'string', minLength: 2, maxLength: 100, example: 'Juan' },
           apellido: { type: 'string', minLength: 2, maxLength: 100, example: 'Pérez' },
-          email: { type: 'string', format: 'email', example: 'juan.perez@example.com' },
-          password: { type: 'string', minLength: 6, example: 'password123' },
           telefono: { type: 'string', maxLength: 20, example: '+52 123 456 7890' },
-          rol: {
-            type: 'string',
-            enum: ['admin', 'condoAdmin', 'owner', 'tenant', 'worker', 'serviceProvider'],
-            example: 'owner',
-          },
         },
       },
       ChangePasswordRequest: {

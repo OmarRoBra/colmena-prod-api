@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { proveedores, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { notifyProviderLifecycle } from '../../services/automation.service';
 
 export const getAllProveedores = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -65,6 +66,9 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
     }).returning();
 
     logger.info(`Proveedor created: ${newProveedor.id}`);
+    void notifyProviderLifecycle(newProveedor).catch((automationError) => {
+      logger.error('Provider create automation failed:', automationError);
+    });
     res.status(201).json({ status: 'success', message: 'Proveedor creado', data: { proveedor: newProveedor } });
   } catch (error) {
     logger.error('Error in createProveedor:', error);
@@ -97,6 +101,9 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
     }).where(eq(proveedores.id, req.params.id)).returning();
 
     logger.info(`Proveedor updated: ${updated.id}`);
+    void notifyProviderLifecycle(updated).catch((automationError) => {
+      logger.error('Provider update automation failed:', automationError);
+    });
     res.status(200).json({ status: 'success', data: { proveedor: updated } });
   } catch (error) {
     logger.error('Error in updateProveedor:', error);

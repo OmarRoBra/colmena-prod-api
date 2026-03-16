@@ -6,6 +6,7 @@ import { mantenimiento, condominios, usuarios, residentes } from '../../db/schem
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
 import { logAudit } from '../../utils/audit';
+import { notifyMaintenanceCreated, notifyMaintenanceUpdated } from '../../services/automation.service';
 
 export const getAllMantenimiento = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -76,6 +77,10 @@ export const createMantenimiento = async (req: Request, res: Response, next: Nex
       ipAddress: req.ip,
     });
 
+    void notifyMaintenanceCreated(newMant).catch((automationError) => {
+      logger.error('Maintenance create automation failed:', automationError);
+    });
+
     res.status(201).json({ status: 'success', message: 'Solicitud creada', data: { mantenimiento: newMant } });
   } catch (error) {
     logger.error('Error in createMantenimiento:', error);
@@ -86,12 +91,23 @@ export const createMantenimiento = async (req: Request, res: Response, next: Nex
 export const updateMantenimiento = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { estado, asignadoA, costo } = req.body;
+    if (!errors.isEmpty()) {
+      logger.warn('Update mantenimiento validation errors', {
+        route: req.originalUrl,
+        method: req.method,
+        validationErrors: errors.array(),
+      });
+      return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
+    }
+    const { titulo, descripcion, categoria, prioridad, estado, asignadoA, costo } = req.body;
     const [existing] = await db.select().from(mantenimiento).where(eq(mantenimiento.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Solicitud no encontrada'));
 
     const [updated] = await db.update(mantenimiento).set({
+      ...(titulo !== undefined && { titulo }),
+      ...(descripcion !== undefined && { descripcion }),
+      ...(categoria !== undefined && { categoria }),
+      ...(prioridad !== undefined && { prioridad }),
       ...(estado && { estado }),
       ...(asignadoA !== undefined && { asignadoA }),
       ...(costo !== undefined && { costo }),
@@ -110,6 +126,10 @@ export const updateMantenimiento = async (req: Request, res: Response, next: Nex
       entidadId: updated.id,
       detalles: { estado: updated.estado },
       ipAddress: req.ip,
+    });
+
+    void notifyMaintenanceUpdated(updated, existing).catch((automationError) => {
+      logger.error('Maintenance update automation failed:', automationError);
     });
 
     res.status(200).json({ status: 'success', data: { mantenimiento: updated } });

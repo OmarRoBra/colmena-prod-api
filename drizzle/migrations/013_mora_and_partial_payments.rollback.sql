@@ -1,0 +1,4 @@
+ALTER TABLE pagos DROP COLUMN IF EXISTS monto_pagado;
+ALTER TABLE pagos DROP COLUMN IF EXISTS mora;
+ALTER TABLE pagos DROP COLUMN IF EXISTS porcentaje_mora;
+ALTER TABLE pagos DROP COLUMN IF EXISTS mora_calculada_at;

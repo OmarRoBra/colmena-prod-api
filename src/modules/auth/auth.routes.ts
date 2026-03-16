@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as authController from './auth.controller';
 import * as authDto from './auth.dto';
 import { authenticate } from '../../middlewares/auth.middleware';
+import { authRateLimiter } from '../../middlewares/rateLimit.middleware';
 
 const router = Router();
 
@@ -12,6 +13,7 @@ const router = Router();
  */
 router.post(
   '/register',
+  authRateLimiter,
   authenticate,
   authDto.registerValidation,
   authController.register

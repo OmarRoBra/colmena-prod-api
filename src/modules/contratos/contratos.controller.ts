@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { contratos, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { notifyContractLifecycle } from '../../services/automation.service';
 
 export const getAllContratos = async (
   req: Request,
@@ -113,6 +114,9 @@ export const createContrato = async (
       .returning();
 
     logger.info(`Contrato created: ${newContrato.id}`);
+    void notifyContractLifecycle(newContrato).catch((automationError) => {
+      logger.error('Contract create automation failed:', automationError);
+    });
 
     res.status(201).json({
       status: 'success',
@@ -161,6 +165,9 @@ export const updateContrato = async (
       .returning();
 
     logger.info(`Contrato updated: ${updated.id}`);
+    void notifyContractLifecycle(updated).catch((automationError) => {
+      logger.error('Contract update automation failed:', automationError);
+    });
 
     res.status(200).json({
       status: 'success',

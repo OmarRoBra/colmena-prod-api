@@ -23,9 +23,4 @@ export const registerValidation = [
     .trim()
     .isLength({ max: 20 })
     .withMessage('El tel\u00e9fono no debe exceder 20 caracteres'),
-
-  body('rol')
-    .optional()
-    .isIn(['admin', 'condoAdmin', 'owner', 'tenant', 'worker', 'serviceProvider', 'resident', 'securityWorker'])
-    .withMessage('El rol debe ser admin, condoAdmin, owner, tenant, worker, serviceProvider, resident o securityWorker'),
 ];

@@ -2,9 +2,21 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../db';
-import { reglamentos, condominios } from '../../db/schema';
+import { reglamentos, condominios, reglamentoAcuses, residentes } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { notifyReglamentoPublished } from '../../services/automation.service';
+import { logAudit } from '../../utils/audit';
+
+async function resolveResidenteFromRequest(userId?: string) {
+  if (!userId) return null;
+  const [resident] = await db
+    .select()
+    .from(residentes)
+    .where(eq(residentes.usuarioId, userId))
+    .limit(1);
+  return resident || null;
+}
 
 export const getAllReglamentos = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -49,7 +61,25 @@ export const getActiveReglamento = async (req: Request, res: Response, next: Nex
       .orderBy(desc(reglamentos.createdAt))
       .limit(1);
 
-    res.status(200).json({ status: 'success', data: { reglamento: activeReglamento || null } });
+    let acknowledgment = null;
+    if (activeReglamento) {
+      const resident = await resolveResidenteFromRequest(req.user?.userId);
+      if (resident) {
+        const [ack] = await db
+          .select()
+          .from(reglamentoAcuses)
+          .where(
+            and(
+              eq(reglamentoAcuses.reglamentoId, activeReglamento.id),
+              eq(reglamentoAcuses.residenteId, resident.id)
+            )
+          )
+          .limit(1);
+        acknowledgment = ack || null;
+      }
+    }
+
+    res.status(200).json({ status: 'success', data: { reglamento: activeReglamento || null, acknowledgment } });
   } catch (error) {
     logger.error('Error in getActiveReglamento:', error);
     next(error);
@@ -69,8 +99,32 @@ export const getReglamentosHistory = async (req: Request, res: Response, next: N
       .from(reglamentos)
       .where(eq(reglamentos.condominioId, req.params.condominioId))
       .orderBy(desc(reglamentos.vigenciaDesde));
+    const acuses = history.length > 0
+      ? await db
+          .select()
+          .from(reglamentoAcuses)
+          .where(eq(reglamentoAcuses.condominioId, req.params.condominioId))
+      : [];
 
-    res.status(200).json({ status: 'success', results: history.length, data: { history } });
+    const acuseCount = new Map<string, number>();
+    for (const acuse of acuses) {
+      acuseCount.set(acuse.reglamentoId, (acuseCount.get(acuse.reglamentoId) || 0) + 1);
+    }
+
+    const resident = await resolveResidenteFromRequest(req.user?.userId);
+    const acknowledgedIds = new Set(
+      acuses
+        .filter((acuse) => resident && acuse.residenteId === resident.id)
+        .map((acuse) => acuse.reglamentoId)
+    );
+
+    const enrichedHistory = history.map((item) => ({
+      ...item,
+      acknowledgmentCount: acuseCount.get(item.id) || 0,
+      acknowledgedByMe: acknowledgedIds.has(item.id),
+    }));
+
+    res.status(200).json({ status: 'success', results: enrichedHistory.length, data: { history: enrichedHistory } });
   } catch (error) {
     logger.error('Error in getReglamentosHistory:', error);
     next(error);
@@ -135,6 +189,9 @@ export const createReglamento = async (req: Request, res: Response, next: NextFu
       .returning();
 
     logger.info(`Reglamento created: ${newReglamento.id}`);
+    void notifyReglamentoPublished(newReglamento).catch((automationError) => {
+      logger.error('Regulation automation failed:', automationError);
+    });
     res.status(201).json({ status: 'success', message: 'Reglamento creado', data: { reglamento: newReglamento } });
   } catch (error) {
     logger.error('Error in createReglamento:', error);
@@ -191,6 +248,9 @@ export const updateReglamento = async (req: Request, res: Response, next: NextFu
       .returning();
 
     logger.info(`Reglamento updated: ${updated.id}`);
+    void notifyReglamentoPublished(updated).catch((automationError) => {
+      logger.error('Regulation update automation failed:', automationError);
+    });
     res.status(200).json({ status: 'success', data: { reglamento: updated } });
   } catch (error) {
     logger.error('Error in updateReglamento:', error);
@@ -238,6 +298,71 @@ export const deleteReglamento = async (req: Request, res: Response, next: NextFu
     res.status(200).json({ status: 'success', message: 'Reglamento eliminado' });
   } catch (error) {
     logger.error('Error in deleteReglamento:', error);
+    next(error);
+  }
+};
+
+export const acknowledgeReglamento = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
+
+    const userId = req.user?.userId;
+    if (!userId) return next(AppError.unauthorized('No autenticado'));
+
+    const [reglamento] = await db.select().from(reglamentos).where(eq(reglamentos.id, req.params.id)).limit(1);
+    if (!reglamento) return next(AppError.notFound('Reglamento no encontrado'));
+
+    const resident = await resolveResidenteFromRequest(userId);
+    if (!resident) return next(AppError.forbidden('No se encontró un residente asociado al usuario autenticado'));
+
+    const [existing] = await db
+      .select()
+      .from(reglamentoAcuses)
+      .where(
+        and(
+          eq(reglamentoAcuses.reglamentoId, reglamento.id),
+          eq(reglamentoAcuses.residenteId, resident.id)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'El reglamento ya había sido confirmado anteriormente',
+        data: { acknowledgment: existing },
+      });
+    }
+
+    const [acknowledgment] = await db
+      .insert(reglamentoAcuses)
+      .values({
+        reglamentoId: reglamento.id,
+        condominioId: reglamento.condominioId,
+        residenteId: resident.id,
+        usuarioId: userId,
+        version: reglamento.version,
+      })
+      .returning();
+
+    await logAudit({
+      usuarioId: userId,
+      condominioId: reglamento.condominioId,
+      accion: 'acknowledge',
+      entidad: 'reglamento',
+      entidadId: reglamento.id,
+      detalles: { version: reglamento.version, residenteId: resident.id },
+      ipAddress: req.ip,
+    });
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Reglamento confirmado correctamente',
+      data: { acknowledgment },
+    });
+  } catch (error) {
+    logger.error('Error in acknowledgeReglamento:', error);
     next(error);
   }
 };

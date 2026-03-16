@@ -29,10 +29,7 @@ class CacheService {
     }
 
     try {
-      this.client = new Redis({
-        host: config.redis.host,
-        port: config.redis.port,
-        password: config.redis.password || undefined,
+      const connectionOptions = {
         retryStrategy: (times: number) => {
           if (times > 3) {
             logger.warn('Redis connection failed after 3 retries, cache will be disabled');
@@ -43,7 +40,20 @@ class CacheService {
         maxRetriesPerRequest: 1,
         enableReadyCheck: true,
         lazyConnect: true,
-      });
+      };
+
+      this.client = config.redis.url
+        ? new Redis(config.redis.url, {
+            ...connectionOptions,
+            tls: config.redis.tls ? {} : undefined,
+          })
+        : new Redis({
+            host: config.redis.host,
+            port: config.redis.port,
+            password: config.redis.password || undefined,
+            tls: config.redis.tls ? {} : undefined,
+            ...connectionOptions,
+          });
 
       this.client.on('connect', () => {
         logger.info('Redis cache connected');

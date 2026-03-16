@@ -6,6 +6,7 @@ import { db } from '../../db';
 import { visitas, residentes, condominios, familiares } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { notifyVisitCreated, notifyVisitStatusChanged } from '../../services/automation.service';
 
 export const getVisitasByCondominio = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -42,7 +43,7 @@ export const createVisita = async (req: Request, res: Response, next: NextFuncti
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
 
-    const { condominioId, residenteId, nombreVisitante, fechaEsperada, familiarId, notas } = req.body;
+    const { condominioId, residenteId, nombreVisitante, fechaEsperada, familiarId, notas, tipo, cantidadPersonas } = req.body;
 
     // Verify condominio exists
     const [condo] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
@@ -64,6 +65,8 @@ export const createVisita = async (req: Request, res: Response, next: NextFuncti
       condominioId,
       residenteId,
       nombreVisitante,
+      tipo: tipo || 'visita',
+      cantidadPersonas: cantidadPersonas ? Number(cantidadPersonas) : 1,
       fechaEsperada: new Date(fechaEsperada),
       qrToken,
       ...(familiarId && { familiarId }),
@@ -71,6 +74,9 @@ export const createVisita = async (req: Request, res: Response, next: NextFuncti
     }).returning();
 
     logger.info(`Visita created: ${newVisita.id} with QR token`);
+    void notifyVisitCreated(newVisita).catch((automationError) => {
+      logger.error('Visit automation failed:', automationError);
+    });
     res.status(201).json({
       status: 'success',
       message: 'Visita creada exitosamente',
@@ -89,6 +95,43 @@ export const scanQr = async (req: Request, res: Response, next: NextFunction) =>
 
     const { qrToken } = req.params;
 
+    // Check if it's a familiar permanent QR (prefixed with FAM-)
+    if (qrToken.startsWith('FAM-')) {
+      const [familiar] = await db.select().from(familiares).where(eq(familiares.qrToken, qrToken)).limit(1);
+      if (!familiar) return next(AppError.notFound('QR de familiar inválido'));
+
+      const [residente] = await db.select().from(residentes).where(eq(residentes.id, familiar.residenteId)).limit(1);
+
+      // Auto-create a visit entry for tracking
+      const visitQrToken = crypto.randomBytes(16).toString('hex');
+      const [autoVisita] = await db.insert(visitas).values({
+        condominioId: familiar.condominioId,
+        residenteId: familiar.residenteId,
+        familiarId: familiar.id,
+        nombreVisitante: familiar.nombre,
+        tipo: 'familiar',
+        cantidadPersonas: 1,
+        fechaEsperada: new Date(),
+        qrToken: visitQrToken,
+        estado: 'llegada',
+        llegadaAt: new Date(),
+      }).returning();
+
+      logger.info(`Familiar QR scanned: ${familiar.nombre} (${familiar.id}) → auto-visit ${autoVisita.id}`);
+      void notifyVisitCreated(autoVisita).catch((automationError) => {
+        logger.error('Family visit automation failed:', automationError);
+      });
+      return res.status(200).json({
+        status: 'success',
+        message: `Familiar autorizado: ${familiar.nombre}`,
+        tipo: 'familiar',
+        familiar: { id: familiar.id, nombre: familiar.nombre, relacion: familiar.relacion },
+        visita: autoVisita,
+        residente: residente ? { nombre: residente.nombre, unidadId: residente.unidadId } : null,
+      });
+    }
+
+    // Regular visit QR
     const [visita] = await db.select().from(visitas).where(eq(visitas.qrToken, qrToken)).limit(1);
     if (!visita) return next(AppError.notFound('QR inválido o visita no encontrada'));
 
@@ -119,6 +162,9 @@ export const scanQr = async (req: Request, res: Response, next: NextFunction) =>
     const [residente] = await db.select().from(residentes).where(eq(residentes.id, visita.residenteId)).limit(1);
 
     logger.info(`QR scanned: visita ${visita.id} → estado ${nuevoEstado}`);
+    void notifyVisitStatusChanged(updatedVisita, visita).catch((automationError) => {
+      logger.error('Visit status automation failed:', automationError);
+    });
     res.status(200).json({
       status: 'success',
       message: `Visita registrada como: ${nuevoEstado}`,

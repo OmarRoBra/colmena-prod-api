@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { notificaciones } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { createNotification } from '../../services/notification-delivery.service';
 
 export const getMyNotificaciones = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -101,14 +102,12 @@ export const createNotificacion = async (req: Request, res: Response, next: Next
 
   try {
     const { usuarioId, condominioId, titulo, mensaje, tipo, accionUrl } = req.body;
-    const [notif] = await db.insert(notificaciones).values({
-      usuarioId,
-      condominioId: condominioId ?? null,
+    const notif = await createNotification(usuarioId, condominioId ?? null, {
       titulo,
       mensaje,
       tipo: tipo ?? 'info',
       accionUrl: accionUrl ?? null,
-    }).returning();
+    });
 
     res.status(201).json({ status: 'success', data: { notificacion: notif } });
   } catch (error) {

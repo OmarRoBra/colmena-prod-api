@@ -41,7 +41,6 @@ export const authenticate = async (
     }
 
     const token = authHeader.substring(7);
-    console.log('Authenticating token:', token);
 
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
@@ -53,10 +52,14 @@ export const authenticate = async (
 
     // Fetch custom role from our usuarios table
     const [dbUser] = await db
-      .select({ rol: usuarios.rol })
+      .select({ rol: usuarios.rol, activo: usuarios.activo })
       .from(usuarios)
       .where(eq(usuarios.id, supabaseUser.id))
       .limit(1);
+
+    if (dbUser && dbUser.activo === false) {
+      return next(AppError.forbidden('Tu acceso al sistema está desactivado'));
+    }
 
     req.user = {
       userId: supabaseUser.id,
