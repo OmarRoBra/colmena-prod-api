@@ -18,6 +18,7 @@ export const updateMantenimientoValidation = [
   body('estado').optional().isIn(['pendiente', 'en_proceso', 'completado', 'cancelado']),
   body('asignadoA').optional().isString(),
   body('costo').optional().isDecimal(),
+  body('notas').optional().isString(),
 ];
 
 export const getMantenimientoValidation = [param('id').isUUID()];

@@ -47,6 +47,13 @@ export const config = {
     from: process.env.MAIL_FROM || 'noreply@condominio.com',
   },
 
+  facturapi: {
+    // Clave global de Facturapi (fallback para condominios sin key propia)
+    key: process.env.FACTURAPI_KEY || '',
+    // Modo: 'test' usa el sandbox de Facturapi, 'live' produce CFDIs timbrados
+    mode: (process.env.FACTURAPI_MODE || 'test') as 'test' | 'live',
+  },
+
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',
     privateKey: process.env.VAPID_PRIVATE_KEY || '',

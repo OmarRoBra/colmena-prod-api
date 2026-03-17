@@ -70,11 +70,18 @@ export const createGasto = async (
       return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
     }
 
-    const { condominioId, concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas } = req.body;
+    const { condominioId, concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas, proveedorId } = req.body;
 
     const [condo] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!condo) {
       return next(AppError.notFound('Condominio no encontrado'));
+    }
+
+    // Verificar proveedor si se provee
+    if (proveedorId) {
+      const { proveedores } = await import('../../db/schema');
+      const [prov] = await db.select({ id: proveedores.id }).from(proveedores).where(eq(proveedores.id, proveedorId)).limit(1);
+      if (!prov) return next(AppError.notFound('Proveedor no encontrado'));
     }
 
     const [newGasto] = await db
@@ -88,6 +95,7 @@ export const createGasto = async (
         fechaGasto: new Date(fechaGasto),
         comprobante,
         notas,
+        proveedorId: proveedorId || null,
       })
       .returning();
 
@@ -115,7 +123,7 @@ export const updateGasto = async (
     }
 
     const { id } = req.params;
-    const { concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas } = req.body;
+    const { concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas, proveedorId, tieneFactura } = req.body;
 
     const [existing] = await db.select().from(gastos).where(eq(gastos.id, id)).limit(1);
     if (!existing) {
@@ -132,6 +140,8 @@ export const updateGasto = async (
         ...(fechaGasto && { fechaGasto: new Date(fechaGasto) }),
         ...(comprobante !== undefined && { comprobante }),
         ...(notas !== undefined && { notas }),
+        ...(proveedorId !== undefined && { proveedorId: proveedorId || null }),
+        ...(tieneFactura !== undefined && { tieneFactura }),
         updatedAt: new Date(),
       })
       .where(eq(gastos.id, id))

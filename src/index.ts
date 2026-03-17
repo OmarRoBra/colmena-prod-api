@@ -48,10 +48,14 @@ import automationsRouter from './modules/automations/automations.routes';
 import conciliacionesRouter from './modules/conciliaciones/conciliaciones.routes';
 import gruposContactoRouter from './modules/grupos-contacto/grupos-contacto.routes';
 import { startAutomationScheduler, stopAutomationScheduler } from './services/automation.service';
-
 function normalizeOrigin(origin: string): string {
   return origin.trim().replace(/\/$/, '');
 }
+import conciliacionRouter from './modules/conciliacion/conciliacion.routes';
+import facturacionRouter from './modules/facturacion/facturacion.routes';
+import proveedoresExternosRouter from './modules/proveedores-externos/proveedores-externos.routes';
+import whatsappRouter from './modules/whatsapp/whatsapp.routes';
+import { whatsappService } from './services/whatsapp.service';
 
 function initializeMiddlewares(app: Application): void {
   app.disable('x-powered-by');
@@ -179,6 +183,10 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/automations`, automationsRouter);
   app.use(`${apiPrefix}/conciliaciones`, conciliacionesRouter);
   app.use(`${apiPrefix}/grupos-contacto`, gruposContactoRouter);
+  app.use(`${apiPrefix}/conciliacion`, conciliacionRouter);
+  app.use(`${apiPrefix}/facturacion`, facturacionRouter);
+  app.use(`${apiPrefix}/proveedores-externos`, proveedoresExternosRouter);
+  app.use(`${apiPrefix}/whatsapp`, whatsappRouter);
 
   app.use(notFoundHandler);
 }
@@ -236,6 +244,9 @@ async function startServer(): Promise<void> {
 
     const app = createApp();
 
+    // Inicializar WhatsApp (solo en entorno no-serverless)
+    whatsappService.initialize();
+
     const server = app.listen(config.port, () => {
       logger.info(`🚀 Server running on port ${config.port}`);
       logger.info(
@@ -268,6 +279,7 @@ async function startServer(): Promise<void> {
           stopAutomationScheduler();
           await closeDatabase();
           await cacheService.close();
+          await whatsappService.destroy();
           logger.info('✅ Graceful shutdown completed');
           process.exit(0);
         } catch (error) {

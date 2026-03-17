@@ -32,6 +32,10 @@ export const getAllCondominios = async (
         statusCondominio: condominios.statusCondominio,
         activo: condominios.activo,
         createdAt: condominios.createdAt,
+        rfc: condominios.rfc,
+        razonSocial: condominios.razonSocial,
+        regimenFiscal: condominios.regimenFiscal,
+        codigoPostalFiscal: condominios.codigoPostalFiscal,
       })
       .from(condominios);
 
@@ -183,6 +187,10 @@ export const getCondominiosByGerente = async (
         statusCondominio: condominios.statusCondominio,
         activo: condominios.activo,
         createdAt: condominios.createdAt,
+        rfc: condominios.rfc,
+        razonSocial: condominios.razonSocial,
+        regimenFiscal: condominios.regimenFiscal,
+        codigoPostalFiscal: condominios.codigoPostalFiscal,
       })
       .from(condominios)
       .where(eq(condominios.gerenteId, gerenteId));
@@ -265,6 +273,10 @@ export const createCondominio = async (
       thumbnail,
       statusCondominio,
       configuracion,
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      codigoPostalFiscal,
     } = req.body;
 
     // If gerenteId is provided, verify it exists
@@ -302,6 +314,10 @@ export const createCondominio = async (
         thumbnail,
         statusCondominio: statusCondominio || 'activo',
         configuracion: configuracion || null,
+        ...(rfc && { rfc: rfc.toUpperCase() }),
+        ...(razonSocial && { razonSocial }),
+        ...(regimenFiscal && { regimenFiscal }),
+        ...(codigoPostalFiscal && { codigoPostalFiscal }),
       })
       .returning();
 
@@ -349,6 +365,12 @@ export const updateCondominio = async (
       statusCondominio,
       activo,
       configuracion,
+      // Datos fiscales para facturación CFDI
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      codigoPostalFiscal,
+      facturapiKey,
     } = req.body;
 
     // Check if condominio exists
@@ -398,6 +420,12 @@ export const updateCondominio = async (
         ...(statusCondominio !== undefined && { statusCondominio }),
         ...(activo !== undefined && { activo }),
         ...(configuracion !== undefined && { configuracion }),
+        ...(configuracion !== undefined && { configuracion }),
+        ...(rfc !== undefined && { rfc: rfc?.toUpperCase() || null }),
+        ...(razonSocial !== undefined && { razonSocial }),
+        ...(regimenFiscal !== undefined && { regimenFiscal }),
+        ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
+        ...(facturapiKey !== undefined && { facturapiKey }),
         updatedAt: new Date(),
       })
       .where(eq(condominios.id, id))
