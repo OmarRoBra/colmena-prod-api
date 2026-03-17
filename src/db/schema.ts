@@ -462,6 +462,21 @@ export const mensajes = pgTable('mensajes', {
 });
 
 // ==========================================
+// GRUPOS DE CONTACTO (Communication contact groups)
+// ==========================================
+export const gruposContacto = pgTable('grupos_contacto', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  condominioId: uuid('condominio_id')
+    .notNull()
+    .references(() => condominios.id, { onDelete: 'cascade' }),
+  nombre: varchar('nombre', { length: 200 }).notNull(),
+  descripcion: text('descripcion').notNull(),
+  miembros: integer('miembros').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
 // ENCUESTAS (Surveys / Polls)
 // ==========================================
 export const encuestas = pgTable('encuestas', {
@@ -528,6 +543,7 @@ export const familiares = pgTable('familiares', {
   relacion: varchar('relacion', { length: 100 }).notNull(), // hijo, esposa, padre, hermano, etc.
   qrToken: varchar('qr_token', { length: 100 }).unique(), // permanent QR pass for familiar
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 // ==========================================
@@ -553,6 +569,7 @@ export const visitas = pgTable('visitas', {
   salidaAt: timestamp('salida_at'),
   notas: text('notas'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 // ==========================================

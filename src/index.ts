@@ -46,6 +46,7 @@ import pushRouter from './modules/push/push.routes';
 import auditLogsRouter from './modules/audit-logs/audit-logs.routes';
 import automationsRouter from './modules/automations/automations.routes';
 import conciliacionesRouter from './modules/conciliaciones/conciliaciones.routes';
+import gruposContactoRouter from './modules/grupos-contacto/grupos-contacto.routes';
 import { startAutomationScheduler, stopAutomationScheduler } from './services/automation.service';
 
 function normalizeOrigin(origin: string): string {
@@ -177,6 +178,7 @@ function initializeRoutes(app: Application): void {
   app.use(`${apiPrefix}/audit-logs`, auditLogsRouter);
   app.use(`${apiPrefix}/automations`, automationsRouter);
   app.use(`${apiPrefix}/conciliaciones`, conciliacionesRouter);
+  app.use(`${apiPrefix}/grupos-contacto`, gruposContactoRouter);
 
   app.use(notFoundHandler);
 }

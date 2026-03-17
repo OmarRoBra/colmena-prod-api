@@ -26,8 +26,7 @@ export const getGastosByCondominio = async (
 
     res.status(200).json({
       status: 'success',
-      results: result.length,
-      gastos: result,
+      data: { results: result.length, gastos: result },
     });
   } catch (error) {
     logger.error('Error in getGastosByCondominio:', error);
@@ -53,7 +52,7 @@ export const getGastoById = async (
       return next(AppError.notFound('Gasto no encontrado'));
     }
 
-    res.status(200).json({ status: 'success', gasto });
+    res.status(200).json({ status: 'success', data: { gasto } });
   } catch (error) {
     logger.error('Error in getGastoById:', error);
     next(error);
@@ -96,8 +95,7 @@ export const createGasto = async (
 
     res.status(201).json({
       status: 'success',
-      message: 'Gasto registrado exitosamente',
-      gasto: newGasto,
+      data: { message: 'Gasto registrado exitosamente', gasto: newGasto },
     });
   } catch (error) {
     logger.error('Error in createGasto:', error);
@@ -143,8 +141,7 @@ export const updateGasto = async (
 
     res.status(200).json({
       status: 'success',
-      message: 'Gasto actualizado exitosamente',
-      gasto: updated,
+      data: { message: 'Gasto actualizado exitosamente', gasto: updated },
     });
   } catch (error) {
     logger.error('Error in updateGasto:', error);
@@ -176,7 +173,7 @@ export const deleteGasto = async (
 
     res.status(200).json({
       status: 'success',
-      message: 'Gasto eliminado exitosamente',
+      data: { message: 'Gasto eliminado exitosamente' },
     });
   } catch (error) {
     logger.error('Error in deleteGasto:', error);

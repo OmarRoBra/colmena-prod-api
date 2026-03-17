@@ -16,7 +16,7 @@ export const getFamiliaresByResidente = async (req: Request, res: Response, next
 
     const result = await db.select().from(familiares).where(eq(familiares.residenteId, residenteId));
 
-    res.status(200).json({ status: 'success', results: result.length, familiares: result });
+    res.status(200).json({ status: 'success', data: { results: result.length, familiares: result } });
   } catch (error) {
     logger.error('Error in getFamiliaresByResidente:', error);
     next(error);
@@ -51,7 +51,7 @@ export const createFamiliar = async (req: Request, res: Response, next: NextFunc
     }).returning();
 
     logger.info(`Familiar created: ${newFamiliar.id} for residente ${residenteId} with QR`);
-    res.status(201).json({ status: 'success', message: 'Familiar agregado exitosamente', familiar: newFamiliar });
+    res.status(201).json({ status: 'success', data: { message: 'Familiar agregado exitosamente', familiar: newFamiliar } });
   } catch (error) {
     logger.error('Error in createFamiliar:', error);
     next(error);
@@ -82,7 +82,7 @@ export const updateFamiliar = async (req: Request, res: Response, next: NextFunc
     const [updated] = await db.update(familiares).set(updateData).where(eq(familiares.id, id)).returning();
 
     logger.info(`Familiar updated: ${id}`);
-    res.status(200).json({ status: 'success', message: 'Familiar actualizado exitosamente', familiar: updated });
+    res.status(200).json({ status: 'success', data: { message: 'Familiar actualizado exitosamente', familiar: updated } });
   } catch (error) {
     logger.error('Error in updateFamiliar:', error);
     next(error);
@@ -102,7 +102,7 @@ export const deleteFamiliar = async (req: Request, res: Response, next: NextFunc
     await db.delete(familiares).where(eq(familiares.id, id));
 
     logger.info(`Familiar deleted: ${id}`);
-    res.status(200).json({ status: 'success', message: 'Familiar eliminado exitosamente' });
+    res.status(200).json({ status: 'success', data: { message: 'Familiar eliminado exitosamente' } });
   } catch (error) {
     logger.error('Error in deleteFamiliar:', error);
     next(error);

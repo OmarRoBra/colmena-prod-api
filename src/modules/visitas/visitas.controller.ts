@@ -16,7 +16,7 @@ export const getVisitasByCondominio = async (req: Request, res: Response, next: 
     const { condominioId } = req.params;
     const result = await db.select().from(visitas).where(eq(visitas.condominioId, condominioId));
 
-    res.status(200).json({ status: 'success', results: result.length, visitas: result });
+    res.status(200).json({ status: 'success', data: { results: result.length, visitas: result } });
   } catch (error) {
     logger.error('Error in getVisitasByCondominio:', error);
     next(error);
@@ -31,7 +31,7 @@ export const getVisitasByResidente = async (req: Request, res: Response, next: N
     const { residenteId } = req.params;
     const result = await db.select().from(visitas).where(eq(visitas.residenteId, residenteId));
 
-    res.status(200).json({ status: 'success', results: result.length, visitas: result });
+    res.status(200).json({ status: 'success', data: { results: result.length, visitas: result } });
   } catch (error) {
     logger.error('Error in getVisitasByResidente:', error);
     next(error);
@@ -79,8 +79,7 @@ export const createVisita = async (req: Request, res: Response, next: NextFuncti
     });
     res.status(201).json({
       status: 'success',
-      message: 'Visita creada exitosamente',
-      visita: newVisita,
+      data: { message: 'Visita creada exitosamente', visita: newVisita },
     });
   } catch (error) {
     logger.error('Error in createVisita:', error);
@@ -123,11 +122,13 @@ export const scanQr = async (req: Request, res: Response, next: NextFunction) =>
       });
       return res.status(200).json({
         status: 'success',
-        message: `Familiar autorizado: ${familiar.nombre}`,
-        tipo: 'familiar',
-        familiar: { id: familiar.id, nombre: familiar.nombre, relacion: familiar.relacion },
-        visita: autoVisita,
-        residente: residente ? { nombre: residente.nombre, unidadId: residente.unidadId } : null,
+        data: {
+          message: `Familiar autorizado: ${familiar.nombre}`,
+          tipo: 'familiar',
+          familiar: { id: familiar.id, nombre: familiar.nombre, relacion: familiar.relacion },
+          visita: autoVisita,
+          residente: residente ? { nombre: residente.nombre, unidadId: residente.unidadId } : null,
+        },
       });
     }
 
@@ -167,9 +168,11 @@ export const scanQr = async (req: Request, res: Response, next: NextFunction) =>
     });
     res.status(200).json({
       status: 'success',
-      message: `Visita registrada como: ${nuevoEstado}`,
-      visita: updatedVisita,
-      residente: residente ? { nombre: residente.nombre, unidadId: residente.unidadId } : null,
+      data: {
+        message: `Visita registrada como: ${nuevoEstado}`,
+        visita: updatedVisita,
+        residente: residente ? { nombre: residente.nombre, unidadId: residente.unidadId } : null,
+      },
     });
   } catch (error) {
     logger.error('Error in scanQr:', error);
@@ -186,7 +189,7 @@ export const getVisitaById = async (req: Request, res: Response, next: NextFunct
     const [visita] = await db.select().from(visitas).where(eq(visitas.id, id)).limit(1);
     if (!visita) return next(AppError.notFound('Visita no encontrada'));
 
-    res.status(200).json({ status: 'success', visita });
+    res.status(200).json({ status: 'success', data: { visita } });
   } catch (error) {
     logger.error('Error in getVisitaById:', error);
     next(error);

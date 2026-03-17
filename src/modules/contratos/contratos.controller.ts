@@ -17,8 +17,7 @@ export const getAllContratos = async (
 
     res.status(200).json({
       status: 'success',
-      results: result.length,
-      contratos: result,
+      data: { results: result.length, contratos: result },
     });
   } catch (error) {
     logger.error('Error in getAllContratos:', error);
@@ -46,8 +45,7 @@ export const getContratosByCondominio = async (
 
     res.status(200).json({
       status: 'success',
-      results: result.length,
-      contratos: result,
+      data: { results: result.length, contratos: result },
     });
   } catch (error) {
     logger.error('Error in getContratosByCondominio:', error);
@@ -73,7 +71,7 @@ export const getContratoById = async (
       return next(AppError.notFound('Contrato no encontrado'));
     }
 
-    res.status(200).json({ status: 'success', contrato });
+    res.status(200).json({ status: 'success', data: { contrato } });
   } catch (error) {
     logger.error('Error in getContratoById:', error);
     next(error);
@@ -120,8 +118,7 @@ export const createContrato = async (
 
     res.status(201).json({
       status: 'success',
-      message: 'Contrato creado exitosamente',
-      contrato: newContrato,
+      data: { message: 'Contrato creado exitosamente', contrato: newContrato },
     });
   } catch (error) {
     logger.error('Error in createContrato:', error);
@@ -171,8 +168,7 @@ export const updateContrato = async (
 
     res.status(200).json({
       status: 'success',
-      message: 'Contrato actualizado exitosamente',
-      contrato: updated,
+      data: { message: 'Contrato actualizado exitosamente', contrato: updated },
     });
   } catch (error) {
     logger.error('Error in updateContrato:', error);
@@ -204,7 +200,7 @@ export const deleteContrato = async (
 
     res.status(200).json({
       status: 'success',
-      message: 'Contrato eliminado exitosamente',
+      data: { message: 'Contrato eliminado exitosamente' },
     });
   } catch (error) {
     logger.error('Error in deleteContrato:', error);
