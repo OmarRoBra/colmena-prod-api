@@ -536,15 +536,12 @@ export const getPagosByCondominium = async (
       });
     }
 
-    // Get all pagos for those units
-    const allPagos = [];
-    for (const u of condoUnidades) {
-      const unitPagos = await db
-        .select()
-        .from(pagos)
-        .where(and(eq(pagos.unidadId, u.id), isNull(pagos.deletedAt)));
-      allPagos.push(...unitPagos);
-    }
+    // Get all pagos for those units in a single query
+    const unitIds = condoUnidades.map(u => u.id);
+    const allPagos = await db
+      .select()
+      .from(pagos)
+      .where(and(inArray(pagos.unidadId, unitIds), isNull(pagos.deletedAt)));
 
     res.status(200).json({
       status: 'success',

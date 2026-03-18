@@ -9,6 +9,7 @@ import {
   decimal,
   json,
   date,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -82,7 +83,10 @@ export const unidades = pgTable('unidades', {
   notas: text('notas'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_unidades_condominium_id').on(t.condominiumId),
+  index('idx_unidades_estado').on(t.estado),
+]);
 
 // ==========================================
 // PAGOS (Payments)
@@ -116,7 +120,11 @@ export const pagos = pgTable('pagos', {
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_pagos_unidad_id').on(t.unidadId),
+  index('idx_pagos_usuario_id').on(t.usuarioId),
+  index('idx_pagos_estado').on(t.estado),
+]);
 
 // ==========================================
 // ÁREAS COMUNES (Shared/Common Areas)
@@ -168,7 +176,10 @@ export const reservaciones = pgTable('reservaciones', {
   motivoRechazo: text('motivo_rechazo'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_reservaciones_condominio_id').on(t.condominioId),
+  index('idx_reservaciones_unidad_id').on(t.unidadId),
+]);
 
 // ==========================================
 // GASTOS (Expenses)
@@ -192,7 +203,9 @@ export const gastos = pgTable('gastos', {
   tieneFactura: boolean('tiene_factura').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_gastos_condominio_id').on(t.condominioId),
+]);
 
 // ==========================================
 // CONCILIACIÓN BANCARIA
@@ -409,7 +422,11 @@ export const mantenimiento = pgTable('mantenimiento', {
   notas: text('notas'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_mantenimiento_condominio_id').on(t.condominioId),
+  index('idx_mantenimiento_tipo').on(t.tipo),
+  index('idx_mantenimiento_residente_id').on(t.residenteId),
+]);
 
 // ==========================================
 // RESIDENTES (Residents)
@@ -443,7 +460,11 @@ export const residentes = pgTable('residentes', {
   facturapiClienteId: varchar('facturapi_cliente_id', { length: 100 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_residentes_condominio_id').on(t.condominioId),
+  index('idx_residentes_unidad_id').on(t.unidadId),
+  index('idx_residentes_usuario_id').on(t.usuarioId),
+]);
 
 // ==========================================
 // TRABAJADORES (Workers/Staff)
@@ -463,6 +484,7 @@ export const trabajadores = pgTable('trabajadores', {
   fechaContratacion: timestamp('fecha_contratacion').notNull(),
   activo: boolean('activo').notNull().default(true),
   documentos: json('documentos'), // Array of document URLs
+  documento: varchar('documento', { length: 500 }), // URL to primary contract PDF
   notas: text('notas'),
   usuarioId: uuid('usuario_id').references(() => usuarios.id, { onDelete: 'set null' }),
   // Datos fiscales (requeridos para tipo=empresa_externa, para emitir CFDI)
@@ -495,6 +517,7 @@ export const proveedores = pgTable('proveedores', {
   calificacion: integer('calificacion').default(5),
   inicioContrato: timestamp('inicio_contrato'),
   finContrato: timestamp('fin_contrato'),
+  documento: varchar('documento', { length: 500 }), // URL to contract PDF
   // Datos fiscales para CFDI 4.0
   razonSocial: varchar('razon_social', { length: 300 }),
   regimenFiscal: varchar('regimen_fiscal', { length: 10 }), // SAT code e.g. '612', '626'
@@ -627,7 +650,10 @@ export const familiares = pgTable('familiares', {
   qrToken: varchar('qr_token', { length: 100 }).unique(), // permanent QR pass for familiar
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-});
+}, (t) => [
+  index('idx_familiares_residente_id').on(t.residenteId),
+  index('idx_familiares_condominio_id').on(t.condominioId),
+]);
 
 // ==========================================
 // VISITAS (Visit QR Tracking)
@@ -653,7 +679,10 @@ export const visitas = pgTable('visitas', {
   notas: text('notas'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-});
+}, (t) => [
+  index('idx_visitas_condominio_id').on(t.condominioId),
+  index('idx_visitas_residente_id').on(t.residenteId),
+]);
 
 // ==========================================
 // CARGADORES EV (Electric Vehicle Chargers)
@@ -713,7 +742,10 @@ export const notificaciones = pgTable('notificaciones', {
   leidaAt: timestamp('leida_at'),
   accionUrl: varchar('accion_url', { length: 300 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (t) => [
+  index('idx_notificaciones_usuario_id').on(t.usuarioId),
+  index('idx_notificaciones_condominio_id').on(t.condominioId),
+]);
 
 // ==========================================
 // PUSH SUBSCRIPTIONS (Web Push API)

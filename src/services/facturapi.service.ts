@@ -133,12 +133,31 @@ export interface ItemFactura {
   descuento?: number;      // Descuento en %
 }
 
+function normalizeUnitKey(unitKey: string): string {
+  const normalized = unitKey.trim().toUpperCase();
+
+  switch (normalized) {
+    case 'MES':
+      return SAT.claveUnidad.MES;
+    case 'DIA':
+      return SAT.claveUnidad.DIA;
+    case 'SERVICIO':
+      return SAT.claveUnidad.SERVICIO;
+    case 'PIEZA':
+      return SAT.claveUnidad.PIEZA;
+    case 'HORA':
+      return SAT.claveUnidad.HORA;
+    default:
+      return normalized;
+  }
+}
+
 export function buildFacturapiItems(items: ItemFactura[]) {
   return items.map((item) => ({
     product: {
       description: item.descripcion,
       product_key: item.claveProducto,
-      unit_key: item.claveUnidad,
+      unit_key: normalizeUnitKey(item.claveUnidad),
       price: item.precio,
       tax_included: false,
       // factor: 'Tasa' es requerido por Facturapi v4 / SAT CFDI 4.0

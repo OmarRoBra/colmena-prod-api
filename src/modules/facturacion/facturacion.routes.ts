@@ -28,24 +28,25 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(authorize('admin', 'condoAdmin', 'superAdmin'));
 
 // ── Catálogos SAT (referencia para el frontend) ───────────────────────────────
 router.get('/catalogos', getCatalogos);
 
 // ── Facturas Emitidas (CFDI de Ingreso hacia residentes/externos) ─────────────
-router.post('/emitir', authorize('condoAdmin', 'superAdmin'), emitirFacturaValidation, emitirFactura);
+router.post('/emitir', emitirFacturaValidation, emitirFactura);
 router.get('/emitidas', listarFacturasEmitidasValidation, getFacturasEmitidas);
 router.get('/emitidas/:id', getByIdValidation, getFacturaEmitidaById);
 router.get('/emitidas/:id/pdf', getByIdValidation, downloadFacturaPdf);
 router.get('/emitidas/:id/xml', getByIdValidation, downloadFacturaXml);
-router.post('/emitidas/:id/cancelar', authorize('condoAdmin', 'superAdmin'), cancelarFacturaValidation, cancelarFactura);
-router.post('/emitidas/:id/enviar-email', authorize('condoAdmin', 'superAdmin'), enviarEmailValidation, enviarFacturaPorEmail);
+router.post('/emitidas/:id/cancelar', cancelarFacturaValidation, cancelarFactura);
+router.post('/emitidas/:id/enviar-email', enviarEmailValidation, enviarFacturaPorEmail);
 
 // ── Facturas Recibidas (CFDI de proveedores externos) ─────────────────────────
-router.post('/recibidas', authorize('condoAdmin', 'superAdmin'), registrarFacturaRecibidaValidation, registrarFacturaRecibida);
+router.post('/recibidas', registrarFacturaRecibidaValidation, registrarFacturaRecibida);
 router.get('/recibidas', listarFacturasRecibidasValidation, getFacturasRecibidas);
 router.get('/recibidas/:id', getByIdValidation, getFacturaRecibidaById);
-router.put('/recibidas/:id', authorize('condoAdmin', 'superAdmin'), updateFacturaRecibidaValidation, updateFacturaRecibida);
-router.delete('/recibidas/:id', authorize('condoAdmin', 'superAdmin'), getByIdValidation, deleteFacturaRecibida);
+router.put('/recibidas/:id', updateFacturaRecibidaValidation, updateFacturaRecibida);
+router.delete('/recibidas/:id', getByIdValidation, deleteFacturaRecibida);
 
 export default router;

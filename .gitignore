@@ -8,3 +8,4 @@ uploads/
 .vscode/
 .idea/
 coverage/
+.wwebjs_auth/

@@ -19,6 +19,8 @@ export const createTrabajadorValidation = [
   body('salario').optional().isFloat({ min: 0 }),
   body('fechaContratacion').notEmpty().isISO8601(),
   body('notas').optional().isString().isLength({ max: 500 }),
+  body('documento').optional({ nullable: true }).trim().isLength({ max: 500 })
+    .withMessage('documento no debe exceder 500 caracteres'),
   // Datos fiscales — requeridos si tipo=empresa_externa
   body('rfc')
     .if(body('tipo').equals('empresa_externa'))
@@ -67,6 +69,8 @@ export const updateTrabajadorValidation = [
   body('salario').optional().isFloat({ min: 0 }),
   body('activo').optional().isBoolean(),
   body('notas').optional().isString().isLength({ max: 500 }),
+  body('documento').optional({ nullable: true }).trim().isLength({ max: 500 })
+    .withMessage('documento no debe exceder 500 caracteres'),
   body('rfc').optional({ nullable: true }).matches(RFC_REGEX).withMessage('RFC inválido'),
   body('razonSocial').optional({ nullable: true }).isString().isLength({ max: 300 }),
   body('regimenFiscal').optional({ nullable: true }).isString().isLength({ max: 10 }),

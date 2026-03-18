@@ -41,6 +41,8 @@ export const createProveedorValidation = [
   body('calificacion').optional().isInt({ min: 1, max: 5 }),
   body('inicioContrato').optional().isISO8601(),
   body('finContrato').optional().isISO8601(),
+  body('documento').optional({ nullable: true }).trim().isLength({ max: 500 })
+    .withMessage('documento no debe exceder 500 caracteres'),
   ...fiscalFields,
 ];
 
@@ -56,6 +58,8 @@ export const updateProveedorValidation = [
   body('calificacion').optional().isInt({ min: 1, max: 5 }),
   body('inicioContrato').optional().isISO8601(),
   body('finContrato').optional().isISO8601(),
+  body('documento').optional({ nullable: true }).trim().isLength({ max: 500 })
+    .withMessage('documento no debe exceder 500 caracteres'),
   ...fiscalFields,
 ];
 

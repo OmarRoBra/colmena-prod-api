@@ -45,7 +45,7 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { condominioId, nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado, direccion, rfc, calificacion, inicioContrato, finContrato } = req.body;
+    const { condominioId, nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado, direccion, rfc, calificacion, inicioContrato, finContrato, documento } = req.body;
 
     const [cond] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!cond) return next(AppError.notFound('Condominio no encontrado'));
@@ -65,6 +65,7 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
       calificacion: calificacion || 5,
       inicioContrato: inicioContrato ? new Date(inicioContrato) : null,
       finContrato: finContrato ? new Date(finContrato) : null,
+      documento: documento || null,
       // Datos fiscales
       razonSocial: razonSocial || null,
       regimenFiscal: regimenFiscal || null,
@@ -89,7 +90,7 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
     const {
       nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado,
-      direccion, rfc, calificacion, inicioContrato, finContrato,
+      direccion, rfc, calificacion, inicioContrato, finContrato, documento,
       razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal,
     } = req.body;
 
@@ -111,6 +112,7 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
       ...(calificacion !== undefined && { calificacion }),
       ...(inicioContrato !== undefined && { inicioContrato: inicioContrato ? new Date(inicioContrato) : null }),
       ...(finContrato !== undefined && { finContrato: finContrato ? new Date(finContrato) : null }),
+      ...(documento !== undefined && { documento }),
       // Datos fiscales
       ...(razonSocial !== undefined && { razonSocial }),
       ...(regimenFiscal !== undefined && { regimenFiscal }),

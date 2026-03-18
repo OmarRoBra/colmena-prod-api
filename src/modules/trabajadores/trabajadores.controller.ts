@@ -60,7 +60,7 @@ export const createTrabajador = async (req: Request, res: Response, next: NextFu
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
     const {
       condominioId, tipo, nombre, apellido, puesto, telefono, email, salario, fechaContratacion, notas,
-      rfc, razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal,
+      rfc, razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal, documento,
     } = req.body;
 
     const [cond] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
@@ -77,6 +77,7 @@ export const createTrabajador = async (req: Request, res: Response, next: NextFu
       salario: salario || null,
       fechaContratacion: new Date(fechaContratacion),
       activo: true,
+      documento: documento || null,
       notas: notas || null,
       rfc: rfc ? rfc.toUpperCase() : null,
       razonSocial: razonSocial || null,
@@ -128,7 +129,7 @@ export const updateTrabajador = async (req: Request, res: Response, next: NextFu
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { tipo, puesto, telefono, salario, activo, notas, rfc, razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal } = req.body;
+    const { tipo, puesto, telefono, salario, activo, notas, rfc, razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal, documento } = req.body;
     const [existing] = await db.select().from(trabajadores).where(eq(trabajadores.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Trabajador no encontrado'));
 
@@ -141,6 +142,7 @@ export const updateTrabajador = async (req: Request, res: Response, next: NextFu
       ...(telefono !== undefined && { telefono }),
       ...(salario !== undefined && { salario }),
       ...(activo !== undefined && { activo }),
+      ...(documento !== undefined && { documento }),
       ...(notas !== undefined && { notas }),
       ...(rfc !== undefined && { rfc: rfc ? rfc.toUpperCase() : null }),
       ...(razonSocial !== undefined && { razonSocial }),

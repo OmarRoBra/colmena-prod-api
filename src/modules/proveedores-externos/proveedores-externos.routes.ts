@@ -16,11 +16,12 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(authorize('admin', 'condoAdmin', 'superAdmin'));
 
-router.post('/', authorize('condoAdmin', 'superAdmin'), createProveedorExternoValidation, createProveedorExterno);
+router.post('/', createProveedorExternoValidation, createProveedorExterno);
 router.get('/', listProveedoresExternosValidation, getProveedoresExternos);
 router.get('/:id', getProveedorExternoValidation, getProveedorExternoById);
-router.put('/:id', authorize('condoAdmin', 'superAdmin'), updateProveedorExternoValidation, updateProveedorExterno);
-router.delete('/:id', authorize('condoAdmin', 'superAdmin'), getProveedorExternoValidation, deleteProveedorExterno);
+router.put('/:id', updateProveedorExternoValidation, updateProveedorExterno);
+router.delete('/:id', getProveedorExternoValidation, deleteProveedorExterno);
 
 export default router;
