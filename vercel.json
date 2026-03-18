@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/v1/automations/cron",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 7 * * *"
     }
   ],
   "rewrites": [
