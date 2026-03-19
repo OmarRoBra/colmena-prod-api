@@ -21,6 +21,13 @@ router.post(
   familiaresController.createFamiliar
 );
 
+router.put(
+  '/:id',
+  authorize('admin', 'condoAdmin', 'resident'),
+  familiaresDto.updateFamiliarValidation,
+  familiaresController.updateFamiliar
+);
+
 router.delete(
   '/:id',
   authorize('admin', 'condoAdmin', 'resident'),

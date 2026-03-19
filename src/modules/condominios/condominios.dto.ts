@@ -31,36 +31,36 @@ export const createCondominioValidation = [
     .withMessage('El estado no debe exceder 100 caracteres'),
 
   body('codigoPostal')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 10 })
     .withMessage('El código postal no debe exceder 10 caracteres'),
 
   body('telefono')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 20 })
     .withMessage('El teléfono no debe exceder 20 caracteres'),
 
   body('email')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isEmail()
     .withMessage('Debe proporcionar un email válido')
     .normalizeEmail(),
 
   body('totalUnidades')
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 0 })
     .withMessage('Total de unidades debe ser un número entero positivo'),
 
   body('gerenteId')
-    .optional()
+    .optional({ checkFalsy: true })
     .isUUID()
     .withMessage('ID de gerente inválido'),
 
   body('thumbnail')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isURL()
     .withMessage('El thumbnail debe ser una URL válida')
@@ -68,9 +68,38 @@ export const createCondominioValidation = [
     .withMessage('El thumbnail no debe exceder 500 caracteres'),
 
   body('statusCondominio')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['activo', 'inactivo', 'archivado'])
     .withMessage('El status del condominio debe ser activo, inactivo o archivado'),
+
+  body('configuracion')
+    .optional()
+    .isObject()
+    .withMessage('La configuración debe ser un objeto JSON'),
+
+  // Datos fiscales para facturación CFDI (opcionales al crear)
+  body('rfc')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 13 })
+    .withMessage('RFC no debe exceder 13 caracteres'),
+
+  body('razonSocial')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage('Razón social no debe exceder 300 caracteres'),
+
+  body('regimenFiscal')
+    .optional({ checkFalsy: true })
+    .isString()
+    .isLength({ max: 10 })
+    .withMessage('Régimen fiscal inválido'),
+
+  body('codigoPostalFiscal')
+    .optional({ checkFalsy: true })
+    .isLength({ min: 4, max: 10 })
+    .withMessage('Código postal fiscal inválido'),
 ];
 
 /**
@@ -78,7 +107,8 @@ export const createCondominioValidation = [
  */
 export const updateCondominioValidation = [
   param('id')
-    .isUUID()
+    .notEmpty()
+    .isString()
     .withMessage('ID de condominio inválido'),
 
   body('nombre')
@@ -106,36 +136,36 @@ export const updateCondominioValidation = [
     .withMessage('El estado no debe exceder 100 caracteres'),
 
   body('codigoPostal')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 10 })
     .withMessage('El código postal no debe exceder 10 caracteres'),
 
   body('telefono')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 20 })
     .withMessage('El teléfono no debe exceder 20 caracteres'),
 
   body('email')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isEmail()
     .withMessage('Debe proporcionar un email válido')
     .normalizeEmail(),
 
   body('totalUnidades')
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 0 })
     .withMessage('Total de unidades debe ser un número entero positivo'),
 
   body('gerenteId')
-    .optional()
+    .optional({ checkFalsy: true })
     .isUUID()
     .withMessage('ID de gerente inválido'),
 
   body('thumbnail')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isURL()
     .withMessage('El thumbnail debe ser una URL válida')
@@ -143,7 +173,7 @@ export const updateCondominioValidation = [
     .withMessage('El thumbnail no debe exceder 500 caracteres'),
 
   body('statusCondominio')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['activo', 'inactivo', 'archivado'])
     .withMessage('El status del condominio debe ser activo, inactivo o archivado'),
 
@@ -151,6 +181,41 @@ export const updateCondominioValidation = [
     .optional()
     .isBoolean()
     .withMessage('Activo debe ser un valor booleano'),
+
+  body('configuracion')
+    .optional()
+    .isObject()
+    .withMessage('La configuración debe ser un objeto JSON'),
+
+  // Datos fiscales para facturación CFDI
+  body('rfc')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 13 })
+    .withMessage('RFC no debe exceder 13 caracteres'),
+
+  body('razonSocial')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage('Razón social no debe exceder 300 caracteres'),
+
+  body('regimenFiscal')
+    .optional({ checkFalsy: true })
+    .isString()
+    .isLength({ max: 10 })
+    .withMessage('Régimen fiscal inválido'),
+
+  body('codigoPostalFiscal')
+    .optional({ checkFalsy: true })
+    .isLength({ min: 4, max: 10 })
+    .withMessage('Código postal fiscal inválido'),
+
+  body('facturapiKey')
+    .optional({ checkFalsy: true })
+    .isString()
+    .isLength({ max: 200 })
+    .withMessage('Facturapi key inválida'),
 ];
 
 /**
@@ -158,7 +223,8 @@ export const updateCondominioValidation = [
  */
 export const getCondominioValidation = [
   param('id')
-    .isUUID()
+    .notEmpty()
+    .isString()
     .withMessage('ID de condominio inválido'),
 ];
 

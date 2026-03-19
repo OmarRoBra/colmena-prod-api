@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { unidades, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { logAudit } from '../../utils/audit';
 
 /**
  * Get all unidades
@@ -172,6 +173,10 @@ export const createUnidad = async (
       );
     }
 
+    // Generate unique payment reference: first 3 chars of condominium name + unit number
+    const condoPrefix = condominio.nombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+    const referenciaUnica = `${condoPrefix}-${numero}`;
+
     // Create unidad
     const [newUnidad] = await db
       .insert(unidades)
@@ -186,6 +191,7 @@ export const createUnidad = async (
         banos: banos || 0,
         estacionamientos: estacionamientos || 0,
         cuotaMantenimiento,
+        referenciaUnica,
         notas,
       })
       .returning();
@@ -193,6 +199,16 @@ export const createUnidad = async (
     logger.info(
       `Unidad created: ${newUnidad.numero} in condominio ${condominiumId}`
     );
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: condominiumId,
+      accion: 'create',
+      entidad: 'unidad',
+      entidadId: newUnidad.id,
+      detalles: { numero: newUnidad.numero, tipo: newUnidad.tipo },
+      ipAddress: req.ip,
+    });
 
     res.status(201).json({
       status: 'success',
@@ -289,6 +305,16 @@ export const updateUnidad = async (
 
     logger.info(`Unidad updated: ${updatedUnidad.id}`);
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: updatedUnidad.condominiumId,
+      accion: 'update',
+      entidad: 'unidad',
+      entidadId: updatedUnidad.id,
+      detalles: { numero: updatedUnidad.numero, estado: updatedUnidad.estado },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Unidad actualizada exitosamente',
@@ -336,12 +362,93 @@ export const deleteUnidad = async (
 
     logger.info(`Unidad deleted: ${id}`);
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: existingUnidad.condominiumId,
+      accion: 'delete',
+      entidad: 'unidad',
+      entidadId: id,
+      detalles: { numero: existingUnidad.numero },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Unidad eliminada exitosamente',
     });
   } catch (error) {
     logger.error('Error in deleteUnidad:', error);
+    next(error);
+  }
+};
+
+/**
+ * Add credit (saldo a favor) to a unit — used for advance payments
+ */
+export const addCredit = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(
+        AppError.unprocessableEntity('Errores de validación', errors.array())
+      );
+    }
+
+    const { id } = req.params;
+    const { monto, concepto } = req.body;
+
+    const [unit] = await db
+      .select()
+      .from(unidades)
+      .where(eq(unidades.id, id))
+      .limit(1);
+
+    if (!unit) {
+      return next(AppError.notFound('Unidad no encontrada'));
+    }
+
+    const creditAmount = parseFloat(monto);
+    if (creditAmount <= 0) {
+      return next(AppError.badRequest('El monto debe ser mayor a 0'));
+    }
+
+    const [updatedUnit] = await db
+      .update(unidades)
+      .set({
+        saldoAFavor: sql`${unidades.saldoAFavor} + ${creditAmount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(unidades.id, id))
+      .returning();
+
+    logger.info(`Credit added to unit ${unit.numero}: $${creditAmount}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: unit.condominiumId,
+      accion: 'add_credit',
+      entidad: 'unidad',
+      entidadId: id,
+      detalles: {
+        monto: creditAmount,
+        concepto: concepto || 'Pago anticipado',
+        saldoAnterior: unit.saldoAFavor,
+        saldoNuevo: updatedUnit.saldoAFavor,
+      },
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Saldo a favor actualizado. Nuevo saldo: $${parseFloat(updatedUnit.saldoAFavor).toFixed(2)}`,
+      data: { unidad: updatedUnit },
+    });
+  } catch (error) {
+    logger.error('Error in addCredit:', error);
     next(error);
   }
 };

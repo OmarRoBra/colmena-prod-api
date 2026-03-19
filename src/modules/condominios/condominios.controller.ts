@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { eq, count, and } from 'drizzle-orm';
+import { eq, count, and, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { condominios, usuarios, unidades } from '../../db/schema';
 import { AppError } from '../../utils/appError';
@@ -32,37 +32,41 @@ export const getAllCondominios = async (
         statusCondominio: condominios.statusCondominio,
         activo: condominios.activo,
         createdAt: condominios.createdAt,
+        rfc: condominios.rfc,
+        razonSocial: condominios.razonSocial,
+        regimenFiscal: condominios.regimenFiscal,
+        codigoPostalFiscal: condominios.codigoPostalFiscal,
       })
       .from(condominios);
 
-    // Calculate occupation for each condominio
-    const condominiosWithOccupation = await Promise.all(
-      allCondominios.map(async (condo) => {
-        // Count occupied units (units with estado = 'occupied')
-        const [occupiedCount] = await db
-          .select({ count: count() })
-          .from(unidades)
-          .where(
-            and(
-              eq(unidades.condominiumId, condo.id),
-              eq(unidades.estado, 'Ocupado')
-            )
-          );
-
-        const occupied = occupiedCount?.count || 0;
-        const total = condo.totalUnidades || 0;
-        const occupationRate = total > 0 ? ((occupied / total) * 100).toFixed(2) : '0.00';
-
-        return {
-          ...condo,
-          totalUnits: total,
-          occupiedUnits: occupied,
-          availableUnits: total - occupied,
-          occupationRate: `${occupationRate}%`,
-          status: condo.statusCondominio || (condo.activo ? 'activo' : 'inactivo'),
-        };
+    // Get occupied unit counts for all condominios in a single query
+    const occupiedCounts = await db
+      .select({
+        condominiumId: unidades.condominiumId,
+        count: count(),
       })
+      .from(unidades)
+      .where(eq(unidades.estado, 'Ocupado'))
+      .groupBy(unidades.condominiumId);
+
+    const occupiedMap = new Map(
+      occupiedCounts.map(r => [r.condominiumId, r.count])
     );
+
+    const condominiosWithOccupation = allCondominios.map((condo) => {
+      const occupied = occupiedMap.get(condo.id) || 0;
+      const total = condo.totalUnidades || 0;
+      const occupationRate = total > 0 ? ((occupied / total) * 100).toFixed(2) : '0.00';
+
+      return {
+        ...condo,
+        totalUnits: total,
+        occupiedUnits: occupied,
+        availableUnits: total - occupied,
+        occupationRate: `${occupationRate}%`,
+        status: condo.statusCondominio || (condo.activo ? 'activo' : 'inactivo'),
+      };
+    });
 
     res.status(200).json({
       status: 'success',
@@ -183,6 +187,10 @@ export const getCondominiosByGerente = async (
         statusCondominio: condominios.statusCondominio,
         activo: condominios.activo,
         createdAt: condominios.createdAt,
+        rfc: condominios.rfc,
+        razonSocial: condominios.razonSocial,
+        regimenFiscal: condominios.regimenFiscal,
+        codigoPostalFiscal: condominios.codigoPostalFiscal,
       })
       .from(condominios)
       .where(eq(condominios.gerenteId, gerenteId));
@@ -264,6 +272,11 @@ export const createCondominio = async (
       gerenteId,
       thumbnail,
       statusCondominio,
+      configuracion,
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      codigoPostalFiscal,
     } = req.body;
 
     // If gerenteId is provided, verify it exists
@@ -300,6 +313,11 @@ export const createCondominio = async (
         gerenteId,
         thumbnail,
         statusCondominio: statusCondominio || 'activo',
+        configuracion: configuracion || null,
+        ...(rfc && { rfc: rfc.toUpperCase() }),
+        ...(razonSocial && { razonSocial }),
+        ...(regimenFiscal && { regimenFiscal }),
+        ...(codigoPostalFiscal && { codigoPostalFiscal }),
       })
       .returning();
 
@@ -346,6 +364,13 @@ export const updateCondominio = async (
       thumbnail,
       statusCondominio,
       activo,
+      configuracion,
+      // Datos fiscales para facturación CFDI
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      codigoPostalFiscal,
+      facturapiKey,
     } = req.body;
 
     // Check if condominio exists
@@ -394,6 +419,13 @@ export const updateCondominio = async (
         ...(thumbnail !== undefined && { thumbnail }),
         ...(statusCondominio !== undefined && { statusCondominio }),
         ...(activo !== undefined && { activo }),
+        ...(configuracion !== undefined && { configuracion }),
+        ...(configuracion !== undefined && { configuracion }),
+        ...(rfc !== undefined && { rfc: rfc?.toUpperCase() || null }),
+        ...(razonSocial !== undefined && { razonSocial }),
+        ...(regimenFiscal !== undefined && { regimenFiscal }),
+        ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
+        ...(facturapiKey !== undefined && { facturapiKey }),
         updatedAt: new Date(),
       })
       .where(eq(condominios.id, id))

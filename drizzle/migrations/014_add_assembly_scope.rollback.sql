@@ -1,0 +1,3 @@
+ALTER TABLE asambleas
+DROP COLUMN IF EXISTS comite_id,
+DROP COLUMN IF EXISTS scope;

@@ -1,0 +1,4 @@
+ALTER TABLE pagos DROP COLUMN IF EXISTS deleted_at;
+ALTER TABLE pagos DROP COLUMN IF EXISTS motivo_rechazo;
+ALTER TABLE pagos DROP COLUMN IF EXISTS aprobado_por;
+ALTER TABLE pagos DROP COLUMN IF EXISTS fecha_aprobacion;

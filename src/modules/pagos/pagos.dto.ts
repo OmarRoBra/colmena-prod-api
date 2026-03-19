@@ -13,8 +13,8 @@ export const createPagoValidation = [
   body('monto')
     .notEmpty()
     .withMessage('El monto es requerido')
-    .isDecimal()
-    .withMessage('El monto debe ser un número decimal'),
+    .isFloat({ min: 0.01 })
+    .withMessage('El monto debe ser un número mayor a 0'),
 
   body('concepto')
     .trim()
@@ -22,6 +22,117 @@ export const createPagoValidation = [
     .withMessage('El concepto es requerido')
     .isLength({ max: 200 })
     .withMessage('El concepto no debe exceder 200 caracteres'),
+
+  body('metodoPago')
+    .optional({ nullable: true })
+    .trim()
+    .isIn(['efectivo', 'transferencia', 'tarjeta', 'pendiente', ''])
+    .withMessage('El método de pago debe ser efectivo, transferencia o tarjeta'),
+
+  body('referencia')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('La referencia no debe exceder 100 caracteres'),
+
+  body('comprobante')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('El comprobante no debe exceder 500 caracteres'),
+
+  body('notas')
+    .optional()
+    .trim(),
+
+  body('fechaLimite')
+    .optional()
+    .isISO8601()
+    .withMessage('La fecha límite debe ser una fecha válida'),
+
+  body('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('La fecha de vencimiento debe ser una fecha válida'),
+];
+
+/**
+ * Validation rules for updating a pago
+ */
+export const updatePagoValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de pago inválido'),
+
+  body('estado')
+    .optional()
+    .isIn(['pendiente', 'completado', 'rechazado', 'por_verificar', 'vencido', 'parcial'])
+    .withMessage('El estado debe ser pendiente, completado, rechazado, por_verificar, vencido o parcial'),
+
+  body('metodoPago')
+    .optional({ nullable: true })
+    .trim()
+    .isIn(['efectivo', 'transferencia', 'tarjeta', 'pendiente', ''])
+    .withMessage('El método de pago debe ser efectivo, transferencia o tarjeta'),
+
+  body('metodoPago')
+    .optional()
+    .isIn(['efectivo', 'transferencia', 'tarjeta', 'pendiente'])
+    .withMessage('El método de pago debe ser efectivo, transferencia, tarjeta o pendiente'),
+
+  body('referencia')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('La referencia no debe exceder 100 caracteres'),
+
+  body('comprobante')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('El comprobante no debe exceder 500 caracteres'),
+
+  body('notas')
+    .optional()
+    .trim(),
+
+  body('fechaLimite')
+    .optional()
+    .isISO8601()
+    .withMessage('La fecha límite debe ser una fecha válida'),
+
+  body('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('La fecha de vencimiento debe ser una fecha válida'),
+
+  body('motivoRechazo')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('El motivo de rechazo no debe exceder 500 caracteres'),
+];
+
+/**
+ * Validation rules for bulk approving payments
+ */
+export const bulkApproveValidation = [
+  body('ids')
+    .isArray({ min: 1 })
+    .withMessage('Debe seleccionar al menos un pago'),
+
+  body('ids.*')
+    .isUUID()
+    .withMessage('ID de pago inválido'),
+];
+
+/**
+ * Validation rules for reporting a payment (resident)
+ */
+export const reportPaymentValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('ID de pago inválido'),
 
   body('metodoPago')
     .trim()
@@ -45,36 +156,27 @@ export const createPagoValidation = [
   body('notas')
     .optional()
     .trim(),
+
+  body('montoPagado')
+    .optional()
+    .isDecimal()
+    .withMessage('El monto pagado debe ser un número decimal'),
 ];
 
 /**
- * Validation rules for updating a pago
+ * Validation rules for requesting payment clarification
  */
-export const updatePagoValidation = [
+export const requestClarificationValidation = [
   param('id')
     .isUUID()
     .withMessage('ID de pago inválido'),
 
-  body('estado')
-    .optional()
-    .isIn(['pendiente', 'completado', 'rechazado'])
-    .withMessage('El estado debe ser pendiente, completado o rechazado'),
-
-  body('referencia')
-    .optional()
+  body('mensaje')
     .trim()
-    .isLength({ max: 100 })
-    .withMessage('La referencia no debe exceder 100 caracteres'),
-
-  body('comprobante')
-    .optional()
-    .trim()
+    .notEmpty()
+    .withMessage('El mensaje es requerido')
     .isLength({ max: 500 })
-    .withMessage('El comprobante no debe exceder 500 caracteres'),
-
-  body('notas')
-    .optional()
-    .trim(),
+    .withMessage('El mensaje no debe exceder 500 caracteres'),
 ];
 
 /**
@@ -119,4 +221,9 @@ export const generateMaintenanceFeesValidation = [
     .withMessage('El año es requerido')
     .isInt({ min: 2020, max: 2100 })
     .withMessage('El año debe ser un número válido'),
+
+  body('diaVencimiento')
+    .optional()
+    .isInt({ min: 1, max: 31 })
+    .withMessage('El día de vencimiento debe estar entre 1 y 31'),
 ];

@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { proveedores, condominios } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { notifyProviderLifecycle } from '../../services/automation.service';
 
 export const getAllProveedores = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -12,6 +13,17 @@ export const getAllProveedores = async (req: Request, res: Response, next: NextF
     res.status(200).json({ status: 'success', results: all.length, data: { proveedores: all } });
   } catch (error) {
     logger.error('Error in getAllProveedores:', error);
+    next(error);
+  }
+};
+
+export const getProveedoresByCondominio = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { condominioId } = req.params;
+    const result = await db.select().from(proveedores).where(eq(proveedores.condominioId, condominioId));
+    res.status(200).json({ status: 'success', results: result.length, data: { proveedores: result } });
+  } catch (error) {
+    logger.error('Error in getProveedoresByCondominio:', error);
     next(error);
   }
 };
@@ -33,10 +45,12 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { condominioId, nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado, direccion, rfc, calificacion, inicioContrato, finContrato } = req.body;
+    const { condominioId, nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado, direccion, rfc, calificacion, inicioContrato, finContrato, documento } = req.body;
 
     const [cond] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!cond) return next(AppError.notFound('Condominio no encontrado'));
+
+    const { razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal } = req.body;
 
     const [newProveedor] = await db.insert(proveedores).values({
       condominioId,
@@ -47,13 +61,22 @@ export const createProveedor = async (req: Request, res: Response, next: NextFun
       telefono,
       estado: estado || 'active',
       direccion,
-      rfc,
+      rfc: rfc?.toUpperCase() || null,
       calificacion: calificacion || 5,
       inicioContrato: inicioContrato ? new Date(inicioContrato) : null,
       finContrato: finContrato ? new Date(finContrato) : null,
+      documento: documento || null,
+      // Datos fiscales
+      razonSocial: razonSocial || null,
+      regimenFiscal: regimenFiscal || null,
+      usoCfdi: usoCfdi || 'G03',
+      codigoPostalFiscal: codigoPostalFiscal || null,
     }).returning();
 
     logger.info(`Proveedor created: ${newProveedor.id}`);
+    void notifyProviderLifecycle(newProveedor).catch((automationError) => {
+      logger.error('Provider create automation failed:', automationError);
+    });
     res.status(201).json({ status: 'success', message: 'Proveedor creado', data: { proveedor: newProveedor } });
   } catch (error) {
     logger.error('Error in createProveedor:', error);
@@ -65,10 +88,17 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado, direccion, rfc, calificacion, inicioContrato, finContrato } = req.body;
+    const {
+      nombreEmpresa, nombreContacto, tipoServicio, email, telefono, estado,
+      direccion, rfc, calificacion, inicioContrato, finContrato, documento,
+      razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal,
+    } = req.body;
 
     const [existing] = await db.select().from(proveedores).where(eq(proveedores.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Proveedor no encontrado'));
+
+    // Si cambia RFC, invalidar facturapiClienteId
+    const rfcChanged = rfc && rfc.toUpperCase() !== existing.rfc;
 
     const [updated] = await db.update(proveedores).set({
       ...(nombreEmpresa && { nombreEmpresa }),
@@ -78,14 +108,24 @@ export const updateProveedor = async (req: Request, res: Response, next: NextFun
       ...(telefono !== undefined && { telefono }),
       ...(estado && { estado }),
       ...(direccion !== undefined && { direccion }),
-      ...(rfc !== undefined && { rfc }),
+      ...(rfc !== undefined && { rfc: rfc?.toUpperCase() || null }),
       ...(calificacion !== undefined && { calificacion }),
       ...(inicioContrato !== undefined && { inicioContrato: inicioContrato ? new Date(inicioContrato) : null }),
       ...(finContrato !== undefined && { finContrato: finContrato ? new Date(finContrato) : null }),
+      ...(documento !== undefined && { documento }),
+      // Datos fiscales
+      ...(razonSocial !== undefined && { razonSocial }),
+      ...(regimenFiscal !== undefined && { regimenFiscal }),
+      ...(usoCfdi !== undefined && { usoCfdi }),
+      ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
+      ...(rfcChanged && { facturapiClienteId: null }),
       updatedAt: new Date(),
     }).where(eq(proveedores.id, req.params.id)).returning();
 
     logger.info(`Proveedor updated: ${updated.id}`);
+    void notifyProviderLifecycle(updated).catch((automationError) => {
+      logger.error('Provider update automation failed:', automationError);
+    });
     res.status(200).json({ status: 'success', data: { proveedor: updated } });
   } catch (error) {
     logger.error('Error in updateProveedor:', error);

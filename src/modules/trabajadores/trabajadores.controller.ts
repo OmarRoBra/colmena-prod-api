@@ -17,6 +17,30 @@ export const getAllTrabajadores = async (req: Request, res: Response, next: Next
   }
 };
 
+export const getMyTrabajador = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return next(AppError.unauthorized('No autenticado'));
+    const [trabajador] = await db.select().from(trabajadores).where(eq(trabajadores.usuarioId, userId)).limit(1);
+    if (!trabajador) return next(AppError.notFound('Trabajador no encontrado'));
+    res.status(200).json({ status: 'success', data: { trabajador } });
+  } catch (error) {
+    logger.error('Error in getMyTrabajador:', error);
+    next(error);
+  }
+};
+
+export const getTrabajadoresByCondominio = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { condominioId } = req.params;
+    const result = await db.select().from(trabajadores).where(eq(trabajadores.condominioId, condominioId));
+    res.status(200).json({ status: 'success', results: result.length, data: { trabajadores: result } });
+  } catch (error) {
+    logger.error('Error in getTrabajadoresByCondominio:', error);
+    next(error);
+  }
+};
+
 export const getTrabajadorById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);
@@ -34,21 +58,39 @@ export const createTrabajador = async (req: Request, res: Response, next: NextFu
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { condominioId, nombre, apellido, puesto, telefono, email, salario, fechaContratacion } = req.body;
+    const {
+      condominioId, tipo, nombre, apellido, puesto, telefono, email, salario, fechaContratacion, notas,
+      rfc, razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal, documento,
+    } = req.body;
 
     const [cond] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!cond) return next(AppError.notFound('Condominio no encontrado'));
 
     const [newTrabajador] = await db.insert(trabajadores).values({
-      condominioId, nombre, apellido, puesto, telefono, email: email?.toLowerCase(), salario,
-      fechaContratacion: new Date(fechaContratacion), activo: true,
+      condominioId,
+      tipo: tipo || 'empleado',
+      nombre,
+      apellido: apellido || null,
+      puesto,
+      telefono: telefono || null,
+      email: email?.toLowerCase() || null,
+      salario: salario || null,
+      fechaContratacion: new Date(fechaContratacion),
+      activo: true,
+      documento: documento || null,
+      notas: notas || null,
+      rfc: rfc ? rfc.toUpperCase() : null,
+      razonSocial: razonSocial || null,
+      regimenFiscal: regimenFiscal || null,
+      usoCfdi: usoCfdi || 'G03',
+      codigoPostalFiscal: codigoPostalFiscal || null,
     }).returning();
 
     logger.info(`Trabajador created: ${newTrabajador.id}`);
 
-    // Create Supabase credentials if email provided
+    // Las empresas externas no necesitan credenciales de acceso
     let credencialesEnviadas = false;
-    if (email) {
+    if (email && (tipo || 'empleado') === 'empleado') {
       try {
         const rol = puesto?.toLowerCase() === 'seguridad' ? 'securityWorker' : 'worker';
         const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
@@ -59,7 +101,7 @@ export const createTrabajador = async (req: Request, res: Response, next: NextFu
           await db.insert(usuarios).values({
             id: inviteData.user.id,
             nombre,
-            apellido,
+            apellido: apellido || '',
             email: email.toLowerCase(),
             rol,
           }).onConflictDoNothing();
@@ -87,15 +129,27 @@ export const updateTrabajador = async (req: Request, res: Response, next: NextFu
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { puesto, telefono, salario, activo } = req.body;
+    const { tipo, puesto, telefono, salario, activo, notas, rfc, razonSocial, regimenFiscal, usoCfdi, codigoPostalFiscal, documento } = req.body;
     const [existing] = await db.select().from(trabajadores).where(eq(trabajadores.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Trabajador no encontrado'));
 
+    // Si cambia RFC, invalidar facturapiClienteId cacheado
+    const rfcChanged = rfc && rfc.toUpperCase() !== existing.rfc;
+
     const [updated] = await db.update(trabajadores).set({
+      ...(tipo !== undefined && { tipo }),
       ...(puesto && { puesto }),
       ...(telefono !== undefined && { telefono }),
       ...(salario !== undefined && { salario }),
       ...(activo !== undefined && { activo }),
+      ...(documento !== undefined && { documento }),
+      ...(notas !== undefined && { notas }),
+      ...(rfc !== undefined && { rfc: rfc ? rfc.toUpperCase() : null }),
+      ...(razonSocial !== undefined && { razonSocial }),
+      ...(regimenFiscal !== undefined && { regimenFiscal }),
+      ...(usoCfdi !== undefined && { usoCfdi }),
+      ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
+      ...(rfcChanged && { facturapiClienteId: null }),
       updatedAt: new Date(),
     }).where(eq(trabajadores.id, req.params.id)).returning();
 

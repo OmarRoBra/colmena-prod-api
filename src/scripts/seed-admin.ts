@@ -7,8 +7,13 @@ import { eq } from 'drizzle-orm';
 import { supabaseAdmin } from '../config/supabase';
 
 async function seedAdmin() {
-  const email = 'admin@condoadmin.com';
-  const password = 'admin123';
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin@condoadmin.com';
+  const password = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!password) {
+    console.error('SEED_ADMIN_PASSWORD environment variable is required.');
+    process.exit(1);
+  }
 
   // Check if profile already exists
   const existing = await db.select().from(usuarios).where(eq(usuarios.email, email)).limit(1);

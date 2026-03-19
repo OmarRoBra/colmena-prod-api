@@ -26,8 +26,7 @@ export const getGastosByCondominio = async (
 
     res.status(200).json({
       status: 'success',
-      results: result.length,
-      gastos: result,
+      data: { results: result.length, gastos: result },
     });
   } catch (error) {
     logger.error('Error in getGastosByCondominio:', error);
@@ -53,7 +52,7 @@ export const getGastoById = async (
       return next(AppError.notFound('Gasto no encontrado'));
     }
 
-    res.status(200).json({ status: 'success', gasto });
+    res.status(200).json({ status: 'success', data: { gasto } });
   } catch (error) {
     logger.error('Error in getGastoById:', error);
     next(error);
@@ -71,11 +70,18 @@ export const createGasto = async (
       return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
     }
 
-    const { condominioId, concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas } = req.body;
+    const { condominioId, concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas, proveedorId } = req.body;
 
     const [condo] = await db.select().from(condominios).where(eq(condominios.id, condominioId)).limit(1);
     if (!condo) {
       return next(AppError.notFound('Condominio no encontrado'));
+    }
+
+    // Verificar proveedor si se provee
+    if (proveedorId) {
+      const { proveedores } = await import('../../db/schema');
+      const [prov] = await db.select({ id: proveedores.id }).from(proveedores).where(eq(proveedores.id, proveedorId)).limit(1);
+      if (!prov) return next(AppError.notFound('Proveedor no encontrado'));
     }
 
     const [newGasto] = await db
@@ -89,6 +95,7 @@ export const createGasto = async (
         fechaGasto: new Date(fechaGasto),
         comprobante,
         notas,
+        proveedorId: proveedorId || null,
       })
       .returning();
 
@@ -96,8 +103,7 @@ export const createGasto = async (
 
     res.status(201).json({
       status: 'success',
-      message: 'Gasto registrado exitosamente',
-      gasto: newGasto,
+      data: { message: 'Gasto registrado exitosamente', gasto: newGasto },
     });
   } catch (error) {
     logger.error('Error in createGasto:', error);
@@ -117,7 +123,7 @@ export const updateGasto = async (
     }
 
     const { id } = req.params;
-    const { concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas } = req.body;
+    const { concepto, descripcion, monto, categoria, fechaGasto, comprobante, notas, proveedorId, tieneFactura } = req.body;
 
     const [existing] = await db.select().from(gastos).where(eq(gastos.id, id)).limit(1);
     if (!existing) {
@@ -134,6 +140,8 @@ export const updateGasto = async (
         ...(fechaGasto && { fechaGasto: new Date(fechaGasto) }),
         ...(comprobante !== undefined && { comprobante }),
         ...(notas !== undefined && { notas }),
+        ...(proveedorId !== undefined && { proveedorId: proveedorId || null }),
+        ...(tieneFactura !== undefined && { tieneFactura }),
         updatedAt: new Date(),
       })
       .where(eq(gastos.id, id))
@@ -143,8 +151,7 @@ export const updateGasto = async (
 
     res.status(200).json({
       status: 'success',
-      message: 'Gasto actualizado exitosamente',
-      gasto: updated,
+      data: { message: 'Gasto actualizado exitosamente', gasto: updated },
     });
   } catch (error) {
     logger.error('Error in updateGasto:', error);
@@ -176,7 +183,7 @@ export const deleteGasto = async (
 
     res.status(200).json({
       status: 'success',
-      message: 'Gasto eliminado exitosamente',
+      data: { message: 'Gasto eliminado exitosamente' },
     });
   } catch (error) {
     logger.error('Error in deleteGasto:', error);

@@ -34,3 +34,8 @@ export const updateReglamentoValidation = [
 export const getReglamentoValidation = [param('id').isUUID()];
 
 export const getReglamentosByCondominioValidation = [param('condominioId').isUUID()];
+
+export const acknowledgeReglamentoValidation = [
+  param('id').isUUID(),
+  body('residenteId').optional().isUUID(),
+];

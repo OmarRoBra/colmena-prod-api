@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as residentesController from './residentes.controller';
 import * as residentesDto from './residentes.dto';
 import { authenticate, authorize } from '../../middlewares/auth.middleware';
+import { cache, invalidateCache, CacheTTL } from '../../middlewares/cache.middleware';
 
 const router = Router();
 
@@ -13,7 +14,12 @@ router.use(authenticate);
  * @desc    Get current user's resident profile
  * @access  Private (resident)
  */
-router.get('/me', authorize('resident', 'admin', 'condoAdmin'), residentesController.getMyResidente);
+router.get(
+  '/me',
+  authorize('resident', 'admin', 'condoAdmin'),
+  cache({ ttl: CacheTTL.SHORT }),
+  residentesController.getMyResidente
+);
 
 /**
  * @route   GET /api/v1/residentes
@@ -23,6 +29,7 @@ router.get('/me', authorize('resident', 'admin', 'condoAdmin'), residentesContro
 router.get(
   '/',
   authorize('admin', 'condoAdmin'),
+  cache({ ttl: CacheTTL.SHORT }),
   residentesController.getAllResidents
 );
 
@@ -34,6 +41,7 @@ router.get(
 router.get(
   '/condominio/:condominioId',
   authorize('admin', 'condoAdmin'),
+  cache({ ttl: CacheTTL.SHORT }),
   residentesController.getResidentsByCondominio
 );
 
@@ -46,6 +54,7 @@ router.get(
   '/unidad/:unidadId',
   authorize('admin', 'condoAdmin', 'owner', 'tenant'),
   residentesDto.getResidentsByUnitValidation,
+  cache({ ttl: CacheTTL.SHORT }),
   residentesController.getResidentsByUnit
 );
 
@@ -58,7 +67,24 @@ router.get(
   '/:id',
   authorize('admin', 'condoAdmin', 'owner', 'tenant'),
   residentesDto.getResidentValidation,
+  cache({ ttl: CacheTTL.SHORT }),
   residentesController.getResidentById
+);
+
+router.get(
+  '/:id/checklist',
+  authorize('admin', 'condoAdmin'),
+  residentesDto.getResidentChecklistValidation,
+  cache({ ttl: CacheTTL.SHORT }),
+  residentesController.getResidentChecklist
+);
+
+router.post(
+  '/:id/cleanup-access',
+  authorize('admin', 'condoAdmin'),
+  residentesDto.cleanupResidentAccessValidation,
+  invalidateCache(['*residentes*', '*visitas*', '*familiares*', '*notificaciones*', '*unidades*']),
+  residentesController.cleanupResidentAccess
 );
 
 /**
@@ -70,6 +96,7 @@ router.post(
   '/',
   authorize('admin', 'condoAdmin'),
   residentesDto.createResidentValidation,
+  invalidateCache(['*residentes*', '*unidades*', '*notificaciones*']),
   residentesController.createResident
 );
 
@@ -82,7 +109,16 @@ router.put(
   '/:id',
   authorize('admin', 'condoAdmin', 'resident'),
   residentesDto.updateResidentValidation,
+  invalidateCache(['*residentes*', '*unidades*', '*visitas*', '*familiares*', '*notificaciones*']),
   residentesController.updateResident
+);
+
+router.put(
+  '/checklists/:checklistId',
+  authorize('admin', 'condoAdmin'),
+  residentesDto.updateChecklistItemValidation,
+  invalidateCache(['*residentes*']),
+  residentesController.updateChecklistItem
 );
 
 /**
@@ -94,6 +130,7 @@ router.delete(
   '/:id',
   authorize('admin'),
   residentesDto.getResidentValidation,
+  invalidateCache(['*residentes*', '*unidades*', '*visitas*', '*familiares*', '*notificaciones*']),
   residentesController.deleteResident
 );
 

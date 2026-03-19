@@ -5,6 +5,8 @@ import { db } from '../../db';
 import { mantenimiento, condominios, usuarios, residentes } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
+import { logAudit } from '../../utils/audit';
+import { notifyMaintenanceCreated, notifyMaintenanceUpdated } from '../../services/automation.service';
 
 export const getAllMantenimiento = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -64,6 +66,21 @@ export const createMantenimiento = async (req: Request, res: Response, next: Nex
     }).returning();
 
     logger.info(`Mantenimiento created: ${newMant.id}`);
+
+    await logAudit({
+      usuarioId: userId,
+      condominioId,
+      accion: 'create',
+      entidad: 'mantenimiento',
+      entidadId: newMant.id,
+      detalles: { titulo: newMant.titulo, tipo: newMant.tipo, prioridad: newMant.prioridad },
+      ipAddress: req.ip,
+    });
+
+    void notifyMaintenanceCreated(newMant).catch((automationError) => {
+      logger.error('Maintenance create automation failed:', automationError);
+    });
+
     res.status(201).json({ status: 'success', message: 'Solicitud creada', data: { mantenimiento: newMant } });
   } catch (error) {
     logger.error('Error in createMantenimiento:', error);
@@ -74,21 +91,48 @@ export const createMantenimiento = async (req: Request, res: Response, next: Nex
 export const updateMantenimiento = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
-    const { estado, asignadoA, costo } = req.body;
+    if (!errors.isEmpty()) {
+      logger.warn('Update mantenimiento validation errors', {
+        route: req.originalUrl,
+        method: req.method,
+        validationErrors: errors.array(),
+      });
+      return next(AppError.unprocessableEntity('Errores de validación', errors.array()));
+    }
+    const { titulo, descripcion, categoria, prioridad, estado, asignadoA, costo, notas } = req.body;
     const [existing] = await db.select().from(mantenimiento).where(eq(mantenimiento.id, req.params.id)).limit(1);
     if (!existing) return next(AppError.notFound('Solicitud no encontrada'));
 
     const [updated] = await db.update(mantenimiento).set({
+      ...(titulo !== undefined && { titulo }),
+      ...(descripcion !== undefined && { descripcion }),
+      ...(categoria !== undefined && { categoria }),
+      ...(prioridad !== undefined && { prioridad }),
       ...(estado && { estado }),
       ...(asignadoA !== undefined && { asignadoA }),
       ...(costo !== undefined && { costo }),
+      ...(notas !== undefined && { notas }),
       ...(estado === 'completado' && { fechaCompletado: new Date() }),
       ...(estado === 'en_proceso' && !existing.fechaInicio && { fechaInicio: new Date() }),
       updatedAt: new Date(),
     }).where(eq(mantenimiento.id, req.params.id)).returning();
 
     logger.info(`Mantenimiento updated: ${updated.id}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: updated.condominioId,
+      accion: 'update',
+      entidad: 'mantenimiento',
+      entidadId: updated.id,
+      detalles: { estado: updated.estado },
+      ipAddress: req.ip,
+    });
+
+    void notifyMaintenanceUpdated(updated, existing).catch((automationError) => {
+      logger.error('Maintenance update automation failed:', automationError);
+    });
+
     res.status(200).json({ status: 'success', data: { mantenimiento: updated } });
   } catch (error) {
     logger.error('Error in updateMantenimiento:', error);

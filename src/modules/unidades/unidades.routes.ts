@@ -74,6 +74,19 @@ router.put(
 );
 
 /**
+ * @route   POST /api/v1/unidades/:id/add-credit
+ * @desc    Add credit (saldo a favor) to a unit for advance payments
+ * @access  Private (admin, condoAdmin)
+ */
+router.post(
+  '/:id/add-credit',
+  authorize('admin', 'condoAdmin'),
+  unidadesDto.addCreditValidation,
+  invalidateCache(['*unidades*']),
+  unidadesController.addCredit
+);
+
+/**
  * @route   DELETE /api/v1/unidades/:id
  * @desc    Delete unidad (soft delete)
  * @access  Private (admin)

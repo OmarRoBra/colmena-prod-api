@@ -3,7 +3,7 @@ import { config } from './env';
 
 export const supabaseAdmin = createClient(
   config.supabase.url,
-  config.supabase.anonKey,
+  config.supabase.serviceRoleKey,
   {
     auth: {
       autoRefreshToken: false,

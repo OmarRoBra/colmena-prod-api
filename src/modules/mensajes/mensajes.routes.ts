@@ -15,14 +15,14 @@ router.get(
 
 router.get(
   '/condominio/:condominioId',
-  authorize('admin', 'condoAdmin', 'resident'),
+  authorize('admin', 'condoAdmin', 'resident', 'worker', 'securityWorker'),
   mensajesDto.getMensajesByCondominioValidation,
   mensajesController.getMensajesByCondominio
 );
 
 router.get(
   '/:id',
-  authorize('admin', 'condoAdmin', 'resident'),
+  authorize('admin', 'condoAdmin', 'resident', 'worker', 'securityWorker'),
   mensajesDto.getMensajeValidation,
   mensajesController.getMensajeById
 );

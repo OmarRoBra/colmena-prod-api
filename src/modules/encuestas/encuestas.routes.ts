@@ -8,6 +8,19 @@ const router = Router();
 router.use(authenticate);
 
 router.get(
+  '/me',
+  authorize('resident'),
+  encuestasController.getEncuestasForCurrentResident
+);
+
+router.post(
+  '/:id/responder',
+  authorize('resident'),
+  encuestasDto.createResidentRespuestaValidation,
+  encuestasController.createRespuestaAsResident
+);
+
+router.get(
   '/condominio/:condominioId',
   authorize('admin', 'condoAdmin'),
   encuestasDto.getEncuestasByCondominioValidation,

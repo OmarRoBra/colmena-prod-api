@@ -41,7 +41,6 @@ export const authenticate = async (
     }
 
     const token = authHeader.substring(7);
-    console.log('Authenticating token:', token);
 
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
@@ -52,16 +51,46 @@ export const authenticate = async (
     const supabaseUser = data.user;
 
     // Fetch custom role from our usuarios table
-    const [dbUser] = await db
-      .select({ rol: usuarios.rol })
+    let [dbUser] = await db
+      .select({ rol: usuarios.rol, activo: usuarios.activo })
       .from(usuarios)
       .where(eq(usuarios.id, supabaseUser.id))
       .limit(1);
 
+    if (dbUser && dbUser.activo === false) {
+      return next(AppError.forbidden('Tu acceso al sistema está desactivado'));
+    }
+
+    // Auto-create profile on first login if it doesn't exist yet
+    if (!dbUser) {
+      const meta = supabaseUser.user_metadata ?? {};
+      const fullName: string = meta.full_name || meta.name || '';
+      const [firstName, ...rest] = fullName.split(' ');
+
+      const [created] = await db
+        .insert(usuarios)
+        .values({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          nombre: meta.nombre || firstName || 'Usuario',
+          apellido: meta.apellido || rest.join(' ') || '',
+          rol: 'condoAdmin',
+          activo: true,
+        })
+        .onConflictDoNothing()
+        .returning({ rol: usuarios.rol, activo: usuarios.activo });
+
+      dbUser = created ?? { rol: 'condoAdmin', activo: true };
+    }
+
+    if (dbUser && dbUser.activo === false) {
+      return next(AppError.forbidden('Tu acceso al sistema está desactivado'));
+    }
+
     req.user = {
       userId: supabaseUser.id,
       email: supabaseUser.email || '',
-      rol: dbUser?.rol || supabaseUser.role || '',
+      rol: dbUser?.rol || 'condoAdmin',
     };
 
     next();

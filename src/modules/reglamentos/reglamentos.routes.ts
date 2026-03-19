@@ -54,6 +54,14 @@ router.get(
   reglamentosController.getReglamentoById
 );
 
+router.post(
+  '/:id/acknowledge',
+  authorize('resident', 'owner', 'tenant'),
+  reglamentosDto.acknowledgeReglamentoValidation,
+  invalidateCache(['*reglamentos*']),
+  reglamentosController.acknowledgeReglamento
+);
+
 /**
  * @route   POST /api/v1/reglamentos
  * @desc    Create a new reglamento

@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray, or } from 'drizzle-orm';
 import { db } from '../../db';
-import { residentes, unidades, condominios, usuarios } from '../../db/schema';
+import { residentes, unidades, condominios, usuarios, residenteChecklists, familiares, visitas } from '../../db/schema';
 import { AppError } from '../../utils/appError';
 import logger from '../../utils/logger';
 import { supabaseAdmin } from '../../config/supabase';
+import { logAudit } from '../../utils/audit';
+import { handleResidentLifecycle, notifyResidentOnboarding } from '../../services/automation.service';
 
 /**
  * Get the resident record for the currently authenticated user (by usuarioId)
@@ -190,12 +192,18 @@ export const createResident = async (
       nombre,
       email,
       telefono,
+      telefonoWhatsapp,
       tipo,
       fechaIngreso,
       documentoIdentidad,
       contactoEmergencia,
       telefonoEmergencia,
       notas,
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      usoCfdi,
+      codigoPostalFiscal,
     } = req.body;
 
     // Verify condominio exists
@@ -251,12 +259,18 @@ export const createResident = async (
         nombre,
         email: email.toLowerCase(),
         telefono,
+        ...(telefonoWhatsapp && { telefonoWhatsapp }),
         tipo: tipo || 'Propietario',
         fechaIngreso: new Date(fechaIngreso),
         documentoIdentidad,
         contactoEmergencia,
         telefonoEmergencia,
         notas,
+        ...(rfc && { rfc }),
+        ...(razonSocial && { razonSocial }),
+        ...(regimenFiscal && { regimenFiscal }),
+        ...(usoCfdi && { usoCfdi }),
+        ...(codigoPostalFiscal && { codigoPostalFiscal }),
       })
       .returning();
 
@@ -264,8 +278,19 @@ export const createResident = async (
       `Resident created: ${newResident.nombre} in condominio ${condominioId}`
     );
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId,
+      accion: 'create',
+      entidad: 'residente',
+      entidadId: newResident.id,
+      detalles: { nombre: newResident.nombre, email: newResident.email, tipo: newResident.tipo },
+      ipAddress: req.ip,
+    });
+
     // Create Supabase credentials and link usuario profile
     let credencialesEnviadas = false;
+    let onboardingUserId: string | null = null;
     try {
       const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         newResident.email,
@@ -284,6 +309,7 @@ export const createResident = async (
           .set({ usuarioId: inviteData.user.id })
           .where(eq(residentes.id, newResident.id));
         credencialesEnviadas = true;
+        onboardingUserId = inviteData.user.id;
         logger.info(`Credentials invited for resident: ${newResident.email}`);
       } else if (inviteErr) {
         logger.warn(`Could not invite resident ${newResident.email}: ${inviteErr.message}`);
@@ -291,6 +317,19 @@ export const createResident = async (
     } catch (credErr) {
       logger.warn(`Credential creation failed for resident ${newResident.email}:`, credErr);
     }
+
+    void notifyResidentOnboarding(
+      { ...newResident, usuarioId: onboardingUserId },
+      credencialesEnviadas
+    ).catch((automationError) => {
+      logger.error('Resident onboarding automation failed:', automationError);
+    });
+
+    void handleResidentLifecycle(
+      { ...newResident, usuarioId: onboardingUserId }
+    ).catch((automationError) => {
+      logger.error('Resident move-in automation failed:', automationError);
+    });
 
     res.status(201).json({
       status: 'success',
@@ -325,6 +364,8 @@ export const updateResident = async (
       nombre,
       email,
       telefono,
+      unidadId,
+      telefonoWhatsapp,
       tipo,
       fechaIngreso,
       documentoIdentidad,
@@ -332,6 +373,11 @@ export const updateResident = async (
       telefonoEmergencia,
       notas,
       activo,
+      rfc,
+      razonSocial,
+      regimenFiscal,
+      usoCfdi,
+      codigoPostalFiscal,
     } = req.body;
 
     // Check if resident exists
@@ -379,6 +425,9 @@ export const updateResident = async (
         ...(nombre && { nombre }),
         ...(email && { email: email.toLowerCase() }),
         ...(telefono && { telefono }),
+        ...(unidadId !== undefined && { unidadId: unidadId || null }),
+        ...(telefonoWhatsapp !== undefined && { telefonoWhatsapp: telefonoWhatsapp || null }),
+        ...(unidadId !== undefined && { unidadId: unidadId || null }),
         ...(tipo && { tipo }),
         ...(fechaIngreso && { fechaIngreso: new Date(fechaIngreso) }),
         ...(documentoIdentidad !== undefined && { documentoIdentidad }),
@@ -386,12 +435,31 @@ export const updateResident = async (
         ...(telefonoEmergencia !== undefined && { telefonoEmergencia }),
         ...(notas !== undefined && { notas }),
         ...(activo !== undefined && { activo }),
+        ...(rfc !== undefined && { rfc }),
+        ...(razonSocial !== undefined && { razonSocial }),
+        ...(regimenFiscal !== undefined && { regimenFiscal }),
+        ...(usoCfdi !== undefined && { usoCfdi }),
+        ...(codigoPostalFiscal !== undefined && { codigoPostalFiscal }),
         updatedAt: new Date(),
       })
       .where(eq(residentes.id, id))
       .returning();
 
     logger.info(`Resident updated: ${updatedResident.id}`);
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: updatedResident.condominioId,
+      accion: 'update',
+      entidad: 'residente',
+      entidadId: updatedResident.id,
+      detalles: { nombre: updatedResident.nombre, activo: updatedResident.activo, unidadId: updatedResident.unidadId },
+      ipAddress: req.ip,
+    });
+
+    void handleResidentLifecycle(updatedResident, existingResident).catch((automationError) => {
+      logger.error('Resident lifecycle automation failed:', automationError);
+    });
 
     res.status(200).json({
       status: 'success',
@@ -440,12 +508,217 @@ export const deleteResident = async (
 
     logger.info(`Resident deleted: ${id}`);
 
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: existingResident.condominioId,
+      accion: 'delete',
+      entidad: 'residente',
+      entidadId: id,
+      detalles: { nombre: existingResident.nombre, email: existingResident.email },
+      ipAddress: req.ip,
+    });
+
+    void handleResidentLifecycle(existingResident, existingResident, { deleted: true }).catch((automationError) => {
+      logger.error('Resident delete automation failed:', automationError);
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Residente eliminado exitosamente',
     });
   } catch (error) {
     logger.error('Error in deleteResident:', error);
+    next(error);
+  }
+};
+
+export const getResidentChecklist = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(
+        AppError.unprocessableEntity('Errores de validación', errors.array())
+      );
+    }
+
+    const { id } = req.params;
+    const [resident] = await db.select().from(residentes).where(eq(residentes.id, id)).limit(1);
+    if (!resident) {
+      return next(AppError.notFound('Residente no encontrado'));
+    }
+
+    const checklist = await db
+      .select()
+      .from(residenteChecklists)
+      .where(eq(residenteChecklists.residenteId, id));
+
+    res.status(200).json({
+      status: 'success',
+      results: checklist.length,
+      data: { checklist },
+    });
+  } catch (error) {
+    logger.error('Error in getResidentChecklist:', error);
+    next(error);
+  }
+};
+
+export const updateChecklistItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(
+        AppError.unprocessableEntity('Errores de validación', errors.array())
+      );
+    }
+
+    const { checklistId } = req.params;
+    const { estado } = req.body;
+
+    const [existing] = await db
+      .select()
+      .from(residenteChecklists)
+      .where(eq(residenteChecklists.id, checklistId))
+      .limit(1);
+
+    if (!existing) {
+      return next(AppError.notFound('Checklist no encontrado'));
+    }
+
+    const targetStatus = estado || 'completado';
+    const [updated] = await db
+      .update(residenteChecklists)
+      .set({
+        estado: targetStatus,
+        completedAt: targetStatus === 'completado' ? new Date() : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(residenteChecklists.id, checklistId))
+      .returning();
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: existing.condominioId,
+      accion: 'update',
+      entidad: 'residente_checklist',
+      entidadId: checklistId,
+      detalles: { estado: updated.estado, residenteId: existing.residenteId, tipo: existing.tipo },
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Checklist actualizado exitosamente',
+      data: { checklist: updated },
+    });
+  } catch (error) {
+    logger.error('Error in updateChecklistItem:', error);
+    next(error);
+  }
+};
+
+export const cleanupResidentAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(
+        AppError.unprocessableEntity('Errores de validación', errors.array())
+      );
+    }
+
+    const { id } = req.params;
+    const familyIds = Array.isArray(req.body.familyIds) ? req.body.familyIds : [];
+    const closeOpenVisits = req.body.closeOpenVisits !== false;
+
+    const [resident] = await db
+      .select()
+      .from(residentes)
+      .where(eq(residentes.id, id))
+      .limit(1);
+
+    if (!resident) {
+      return next(AppError.notFound('Residente no encontrado'));
+    }
+
+    const residentFamily = await db
+      .select({ id: familiares.id, nombre: familiares.nombre, relacion: familiares.relacion })
+      .from(familiares)
+      .where(eq(familiares.residenteId, id));
+
+    const deletableFamilyIds = familyIds.length > 0
+      ? residentFamily.filter((item) => familyIds.includes(item.id)).map((item) => item.id)
+      : residentFamily.map((item) => item.id);
+
+    let familiaresEliminados = 0;
+    if (deletableFamilyIds.length > 0) {
+      await db.delete(familiares).where(inArray(familiares.id, deletableFamilyIds));
+      familiaresEliminados = deletableFamilyIds.length;
+    }
+
+    let visitasCerradas = 0;
+    if (closeOpenVisits) {
+      const openVisits = await db
+        .select({ id: visitas.id })
+        .from(visitas)
+        .where(
+          and(
+            eq(visitas.residenteId, id),
+            or(eq(visitas.estado, 'pendiente'), eq(visitas.estado, 'llegada'))
+          )
+        );
+
+      if (openVisits.length > 0) {
+        await db
+          .update(visitas)
+          .set({
+            estado: 'salida',
+            salidaAt: new Date(),
+          })
+          .where(
+            and(
+              eq(visitas.residenteId, id),
+              or(eq(visitas.estado, 'pendiente'), eq(visitas.estado, 'llegada'))
+            )
+          );
+        visitasCerradas = openVisits.length;
+      }
+    }
+
+    await logAudit({
+      usuarioId: req.user?.userId ?? null,
+      condominioId: resident.condominioId,
+      accion: 'update',
+      entidad: 'residente_cleanup',
+      entidadId: resident.id,
+      detalles: {
+        familiaresEliminados,
+        visitasCerradas,
+      },
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Limpieza de accesos completada exitosamente',
+      data: {
+        familiaresEliminados,
+        visitasCerradas,
+      },
+    });
+  } catch (error) {
+    logger.error('Error in cleanupResidentAccess:', error);
     next(error);
   }
 };
