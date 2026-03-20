@@ -59,10 +59,36 @@ const DEFAULT_SUMMARY = (): AutomationRunSummary => ({
 let schedulerHandle: NodeJS.Timeout | null = null;
 let schedulerRunning = false;
 
-const AUTOMATION_INTERVAL_MS = Math.max(
-  Number(process.env.AUTOMATION_INTERVAL_MINUTES || '30'),
-  5
-) * 60 * 1000;
+const MIN_AUTOMATION_INTERVAL_MINUTES = 5;
+const MAX_TIMER_MS = 2_147_483_647;
+const MAX_AUTOMATION_INTERVAL_MINUTES = Math.floor(MAX_TIMER_MS / 60_000);
+
+function resolveAutomationIntervalMs() {
+  const rawValue = process.env.AUTOMATION_INTERVAL_MINUTES;
+  const parsedMinutes = Number(rawValue || '30');
+
+  if (!Number.isFinite(parsedMinutes)) {
+    logger.warn(
+      `Invalid AUTOMATION_INTERVAL_MINUTES value "${rawValue}". Falling back to 30 minutes.`
+    );
+    return 30 * 60 * 1000;
+  }
+
+  const clampedMinutes = Math.min(
+    Math.max(parsedMinutes, MIN_AUTOMATION_INTERVAL_MINUTES),
+    MAX_AUTOMATION_INTERVAL_MINUTES
+  );
+
+  if (clampedMinutes !== parsedMinutes) {
+    logger.warn(
+      `AUTOMATION_INTERVAL_MINUTES=${parsedMinutes} is outside the supported range (${MIN_AUTOMATION_INTERVAL_MINUTES}-${MAX_AUTOMATION_INTERVAL_MINUTES}). Using ${clampedMinutes} minutes instead.`
+    );
+  }
+
+  return Math.floor(clampedMinutes * 60 * 1000);
+}
+
+const AUTOMATION_INTERVAL_MS = resolveAutomationIntervalMs();
 
 const AUTOMATIONS_ENABLED = process.env.AUTOMATIONS_ENABLED !== 'false';
 
